@@ -1,2 +1,2 @@
-# AudioAlgorithm
-A collection of audio algorithm
+# Tests
+A collection of my attemps
