@@ -1,3 +1,4 @@
+# Get this code from: https://sites.google.com/site/georgeevangelidis/ecc
 ECC algorithm is implemented in the file ecc.cpp as a function with the name cvFindTransform.
 
 The file image_registration is the main function that takes input arguments, calls ECC algorithm and displays/saves the results.
