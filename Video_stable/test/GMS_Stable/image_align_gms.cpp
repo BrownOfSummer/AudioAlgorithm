@@ -3,6 +3,7 @@
 #include "gms_matcher.h"
 #include <ctime>
 
+#include<fstream>
 #include<iostream>
 using namespace std;
 
@@ -10,6 +11,7 @@ inline size_t getMatchPoint(Mat img1, Mat img2, vector<KeyPoint> &kp1, vector<Ke
 int main(int argc, char* argv[])
 {
 
+    ofstream out_inlier("inliner.txt");
     if(argc != 3){
         cout<<"ERROR: Wrong input-> "<<argv[0]<<" img1 img2"<<endl;
         return -1;
@@ -34,6 +36,7 @@ int main(int argc, char* argv[])
         //std::cout<<"left = "<<left<<"; right = "<<right<<std::endl;
         Pre.push_back(left);
         Next.push_back(right);
+        out_inlier<<left.x<<" "<<left.y<<" "<<right.x<<" "<<right.y<<endl;
     }
     Mat T, im_aligned;
     if( n_match > 0 )
@@ -49,7 +52,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        warpAffine(img2, im_aligned, T, img2.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_TRANSPARENT);
+        //warpAffine(img2, im_aligned, T, img2.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_TRANSPARENT);
+        warpAffine(img1, im_aligned, T, img2.size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_TRANSPARENT);
         imshow("align", im_aligned);
     }
     imshow("img1", img1);
