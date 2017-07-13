@@ -1,5 +1,5 @@
 /*************************************************************************
-    > File Name: image_align.cpp
+    > File Name: videostab_gms.cpp
     > Author: li_pengju
     > Mail: li_pengju@vobile.cn 
     > Copyright (c) Vobile Inc. All Rights Reserved
@@ -18,6 +18,7 @@ using namespace cv;
 using namespace std;
 const int SMOOTHING_RADIUS = 5;
 const int HORIZONTAL_BORDER_CROP = 5; // In pixels. Crops the border to reduce the black borders from stabilisation being too noticeable.
+bool USE_ROI = 0;
 struct TransformParam
 {
     TransformParam() {}
@@ -51,53 +52,71 @@ int no_smooth_warp_para(vector<TransformParam> prev_to_cur_transform, vector<Tra
 
 int main(int argc, char* argv[])
 {
-    string ImgNamesLists[1000];
-    char str[200];
-    FILE *fImgList = fopen(argv[1], "rb");
-    if (NULL == fImgList)
-        return -1;
-    int count = 0;
-    while (fgets(str, 200, fImgList) != NULL && count < 1000) {
-        memset(str + strlen(str)-1, 0, 1);
-        ImgNamesLists[count] = str;
-        count ++;
-    }
     // Step 1, Get the rois
     cout<<"Get roi..."<<endl;
     Mat srcImage, roiImg;
     vector<Mat> rois;
-    for(int i = 0; i < count; i ++)
-    {
-        // Read the images to be aligned
-        srcImage = imread(ImgNamesLists[i]);
-        if(srcImage.empty())
-        {
-            cout<< "Cannot open image ["<<argv[i]<<"]"<<endl;
-            return -1;
-        }
-        
-        //int roi_height = 300;
-        //int roi_width = 200;
-        //int sy = srcImage.rows / 4 + 20;
-        //int sx = srcImage.cols / 3 + 50;
-        //int sy = 205;
-        //int sx = 390;
-        //int roi_height = 460 - sy;
-        //int roi_width = 570 - sx;
-        int roi_height = srcImage.rows - 1;
-        int roi_width = srcImage.cols - 1;
-        int sy = 0;
-        int sx = 0;
-        if( sy + roi_height >= srcImage.rows || sx + roi_width >= srcImage.cols ){
-            cout<< "ERROR: "<<"Region overstep border!"<<endl;
-            return -1;
-        }
-        Rect rect(sx, sy, roi_width, roi_height);
-        srcImage(rect).copyTo(roiImg);
-        rois.push_back(roiImg.clone());
-    }
-    cout<<"rois size(71): "<<rois.size()<<endl;
 
+    VideoCapture cap(argv[1]);
+    double fps, frame_width, frame_height;
+    fps = cap.get(CV_CAP_PROP_FPS);
+    frame_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    frame_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    int count = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    if(!cap.isOpened())  // check if we succeeded
+    {
+        cout<<"Open video "<<argv[1]<< " Failed !"<<endl;
+        return -1;
+    }
+    else
+    {
+        cout<<"fps = "<<fps<<endl;
+        cout<<"frame_width = "<<frame_width<<endl;
+        cout<<"frame_height = "<<frame_height<<endl;
+        cout<<"frame_count = "<<count<<endl;
+        //cout<<"codec: "<<cap.get(CV_CAP_PROP_FOURCC)<<endl;
+        //cout<<CV_FOURCC('M', 'J', 'P', 'G');  // select desired codec (must be available at runtime)
+    }
+    if( USE_ROI )
+    {
+        for(;;)
+        {
+            cap >> srcImage;
+            if( srcImage.empty() )
+                break;
+            int roi_height = 300;
+            int roi_width = 200;
+            int sy = srcImage.rows / 4 + 20;
+            int sx = srcImage.cols / 3 + 50;
+            if( sy + roi_height > srcImage.rows || sx + roi_width > srcImage.cols )
+            {
+                cout<< "ERROR: "<<"Region overstep border!"<<endl;
+                return -1;
+            }
+        Rect rect(sx, sy, roi_width, roi_height);
+        rois.push_back(srcImage(rect).clone());
+        }
+    }
+    else
+    {
+        for(;;)
+        {
+            cap >> srcImage;
+            if( srcImage.empty() )
+                break;
+            rois.push_back(srcImage.clone());
+        }
+    }
+    if( count != rois.size() )
+    {
+        cout<<"Read frame error!"<<endl;
+        cout<<count<<" "<<rois.size()<<endl;
+        //return -1;
+    }
+    else
+    {
+        cout<<"rois size("<<count<<") "<<rois.size()<<endl;
+    }
     // Step 2. Generate warps
     Mat warp_matrix;
     Mat warpMatrix = Mat::eye(2, 3, CV_64F);
@@ -107,7 +126,7 @@ int main(int argc, char* argv[])
     vector<Point2f> prev, cur;
 
     cout<<"Generate warp matrix..."<<endl;
-    for(int i = 0; i < count; i ++)
+    for(int i = 0; i < rois.size(); i ++)
     {
         
         if( i == 0 ){
@@ -128,12 +147,14 @@ int main(int argc, char* argv[])
         if( n_match > 0 )
             T = estimateRigidTransform(prev, cur, false);
         else {
-            cout<<"ERROR: "<<ImgNamesLists[i-1]<<" and "<<ImgNamesLists[i]<<" do not match !"<<endl;
+            //cout<<"ERROR: "<<ImgNamesLists[i-1]<<" and "<<ImgNamesLists[i]<<" do not match !"<<endl;
+            cout<<"ERROR: "<<"frame"<<i-1<<" and "<<"frame"<<i<<" do not match !"<<endl;
             return -1;
             //warpMatrix.copyTo(warp_matrix);
         }
         if( T.empty() ){
-            cout<<"WARNING: "<<ImgNamesLists[i-1]<<" and "<<ImgNamesLists[i]<<" can not warp !"<<endl;
+            //cout<<"WARNING: "<<ImgNamesLists[i-1]<<" and "<<ImgNamesLists[i]<<" can not warp !"<<endl;
+            cout<<"ERROR: "<<"frame"<<i-1<<" and "<<"frame"<<i<<" do not match !"<<endl;
         }
         else {
             T.copyTo(warp_matrix);
@@ -182,13 +203,14 @@ int main(int argc, char* argv[])
         T.at<double>(1, 2) = new_prev_to_cur_transform[i].dy;
 
         //warpAffine(rois[i], im_aligned, T, rois[i].size(), INTER_LINEAR + WARP_INVERSE_MAP, BORDER_TRANSPARENT);
-        srcImage = imread(ImgNamesLists[i]);
-        warpAffine(srcImage, im_aligned, T, srcImage.size(), INTER_LINEAR, BORDER_TRANSPARENT);
-        //warpAffine(rois[i], im_aligned, T, rois[i].size(), INTER_LINEAR, BORDER_TRANSPARENT);
+        //srcImage = imread(ImgNamesLists[i]);
+        //warpAffine(srcImage, im_aligned, T, srcImage.size(), INTER_LINEAR, BORDER_TRANSPARENT);
+        warpAffine(rois[i], im_aligned, T, rois[i].size(), INTER_LINEAR, BORDER_TRANSPARENT);
         warped_rois.push_back(im_aligned.clone());
     }
     cout<<"warped_rois size(70): "<<warped_rois.size()<<endl;
 
+    /*
     char tmp[200];
     string out_name;
     for(int i = 0; i < warped_rois.size(); i ++)
@@ -198,6 +220,37 @@ int main(int argc, char* argv[])
         imwrite(out_name, warped_rois[i]);
         //imshow("warped", warped_rois[i]);
         //waitKey();
+    }
+    */
+    // Write the video
+    //--- INITIALIZE VIDEOWRITER
+    bool isColor = (warped_rois[0].type() == CV_8UC3);
+    VideoWriter writer;
+    int codec = CV_FOURCC('M', 'J', 'P', 'G');  // select desired codec (must be available at runtime)
+    //double fps = 25.0;                          // framerate of the created video stream
+    string filename = "./stabilisation.avi";             // name of the output video file
+    writer.open(filename, codec, fps, warped_rois[0].size(), isColor);
+    // check if we succeeded
+    if (!writer.isOpened()) {
+        cerr << "Could not open the output video file for write\n";
+        return -1;
+    }
+    //--- GRAB AND WRITE LOOP
+    cout << "Writing videofile: " << filename << endl
+         << "Press any key to terminate" << endl;
+    for (int i = 0; i < warped_rois.size(); i ++)
+    {
+        // check if we succeeded
+        if ( warped_rois[i].empty() ) {
+            cerr << "ERROR! blank frame grabbed\n";
+            break;
+        }
+        // encode the frame into the videofile stream
+        writer.write(warped_rois[i]);
+        // show live and wait for a key with timeout long enough to show images
+        imshow("Live", warped_rois[i]);
+        if (waitKey(5) >= 0)
+            break;
     }
     return 0;
 }
