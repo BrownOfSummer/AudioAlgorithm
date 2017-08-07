@@ -3,3 +3,4 @@ Do some tests about video stablization !
 (1) ./ecc_opencv the impletement of ecc algorithm in opencv2.+
 (2) ./test test ECC and GMS match method to align the frames, based opencv3, result is so so.
 (3) ./Rolling-Shutter-Video-Stabilization solve the Rolling Shutter problem, form from https://github.com/NickStupich/Rolling-Shutter-Video-Stabilization
+(4) ./SubspaceStab fork from https://github.com/higerra/SubspaceStab
