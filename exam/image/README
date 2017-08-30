@@ -1,0 +1,2 @@
+## Bilinear Interpolation
+(1) ./scale_img.cpp scale image, both use Mat and C pointer, implement the algorithm. some error when scale < 0.8
