@@ -1,0 +1,24 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+CPP	Makefile	/^CPP=g++$/;"	m
+GET_INT_VECTOR	auxfunc.h	/^#define GET_INT_VECTOR(/;"	d
+GET_VECTOR	auxfunc.h	/^#define GET_VECTOR(/;"	d
+INCLUDE	Makefile	/^INCLUDE=$(shell pkg-config --cflags opencv)$/;"	m
+LIBS	Makefile	/^LIBS=$(shell pkg-config --libs opencv)$/;"	m
+OBJS	Makefile	/^OBJS=auxfunc.o forwadditive.o invcomp.o stdafx.o$/;"	m
+SET_VECTOR	auxfunc.h	/^#define SET_VECTOR(/;"	d
+_WIN32_WINNT	stdafx.h	/^#define _WIN32_WINNT /;"	d
+__AUXFUNC_H__	auxfunc.h	/^#define __AUXFUNC_H__$/;"	d
+__FORWADDITIVE_H__	forwadditive.h	/^#define __FORWADDITIVE_H__$/;"	d
+__INVERSECOMP_H__	invcomp.h	/^#define __INVERSECOMP_H__$/;"	d
+align_image_forwards_additive	forwadditive.cpp	/^void align_image_forwards_additive(IplImage* pImgT, CvRect omega, IplImage* pImgI)$/;"	f
+align_image_inverse_compositional	invcomp.cpp	/^void align_image_inverse_compositional(IplImage* pImgT, CvRect omega, IplImage* pImgI)$/;"	f
+draw_warped_rect	auxfunc.cpp	/^void draw_warped_rect(IplImage* pImage, CvRect rect, CvMat* W)$/;"	f
+init_warp	auxfunc.cpp	/^void init_warp(CvMat* W, float wz, float tx, float ty)$/;"	f
+interpolate	auxfunc.h	/^float interpolate(IplImage* pImage, float x, float y)$/;"	f
+main	main.cpp	/^int main(int argc, char* argv[])$/;"	f
+warp_image	auxfunc.cpp	/^void warp_image(IplImage* pSrcFrame, IplImage* pDstFrame, CvMat* W)$/;"	f
