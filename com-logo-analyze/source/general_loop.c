@@ -1,4 +1,5 @@
-#include "../platform.h"
+//#include "../platform.h"
+#include "platform.h"
 #include "ccextractor.h"
 #include <string.h>
 #include <stdlib.h>
