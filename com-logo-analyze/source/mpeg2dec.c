@@ -1675,13 +1675,13 @@ int stream_component_open(VideoState *is, int stream_index)
 
 
 	codec = avcodec_find_decoder(codecCtx->codec_id);
-	
+
 	// If decoding in hardware try if running on a Raspberry Pi and then use it's decoder instead.
     if (hardware_decode) {
-		if (codecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO && avcodec_find_decoder_by_name("mpeg2_mmal") >= 0) codec = avcodec_find_decoder_by_name("mpeg2_mmal");
-		if (codecCtx->codec_id == AV_CODEC_ID_H264 && avcodec_find_decoder_by_name("h264_mmal") >= 0) codec = avcodec_find_decoder_by_name("h264_mmal");
-		if (codecCtx->codec_id == AV_CODEC_ID_MPEG4 && avcodec_find_decoder_by_name("mpeg4_mmal") >= 0) codec = avcodec_find_decoder_by_name("mpeg4_mmal");
-		if (codecCtx->codec_id == AV_CODEC_ID_VC1 && avcodec_find_decoder_by_name("vc1_mmal") >= 0) codec = avcodec_find_decoder_by_name("vc1_mmal");
+		if (codecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO && avcodec_find_decoder_by_name("mpeg2_mmal") != NULL) codec = avcodec_find_decoder_by_name("mpeg2_mmal");
+		if (codecCtx->codec_id == AV_CODEC_ID_H264 && avcodec_find_decoder_by_name("h264_mmal") != NULL) codec = avcodec_find_decoder_by_name("h264_mmal");
+		if (codecCtx->codec_id == AV_CODEC_ID_MPEG4 && avcodec_find_decoder_by_name("mpeg4_mmal") != NULL) codec = avcodec_find_decoder_by_name("mpeg4_mmal");
+		if (codecCtx->codec_id == AV_CODEC_ID_VC1 && avcodec_find_decoder_by_name("vc1_mmal") != NULL) codec = avcodec_find_decoder_by_name("vc1_mmal");
     }
 
     if (!hardware_decode) av_dict_set_int(&myoptions, "gray", 1, 0);
@@ -1760,8 +1760,6 @@ int stream_component_open(VideoState *is, int stream_index)
                         if(  (codecCtx->skip_frame >= AVDISCARD_NONREF && s2->pict_type==FF_B_TYPE)
                             ||(codecCtx->skip_frame >= AVDISCARD_NONKEY && s2->pict_type!=FF_I_TYPE)
                             || codecCtx->skip_frame >= AVDISCARD_ALL)
-
-
                         if(  (s->avctx->skip_idct >= AVDISCARD_NONREF && s->pict_type == FF_B_TYPE)
                            ||(codecCtx->skip_idct >= AVDISCARD_NONKEY && s->pict_type != FF_I_TYPE)
                            || s->avctx->skip_idct >= AVDISCARD_ALL)
@@ -1770,13 +1768,11 @@ int stream_component_open(VideoState *is, int stream_index)
                ||(s->codecCtx->skip_loop_filter >= AVDISCARD_NONKEY && h->slice_type_nos != FF_I_TYPE)
                ||(s->codecCtx->skip_loop_filter >= AVDISCARD_BIDIR  && h->slice_type_nos == FF_B_TYPE)
                ||(s->codecCtx->skip_loop_filter >= AVDISCARD_NONREF && h->nal_ref_idc == 0))
-
         Both
                         if(  (codecCtx->skip_frame >= AVDISCARD_NONREF && s2->pict_type==FF_B_TYPE)
                             ||(codecCtx->skip_frame >= AVDISCARD_NONKEY && s2->pict_type!=FF_I_TYPE)
                             || codecCtx->skip_frame >= AVDISCARD_ALL)
                             break;
-
         */
         if (skip_B_frames)
             codecCtx->skip_frame = AVDISCARD_NONREF;
@@ -2241,7 +2237,8 @@ nextpacket:
                     is->seek_req++;
                     goto again;
                 }
-                if (retries) Debug( 9,"Retry t_pos=%" PRId64 ", l_pos=%" PRId64 ", t_pts=%" PRId64 ", l_pts=%" PRId64 "\n", last_packet_pos, packet->pos, last_packet_pts, packet->pts);
+                if (retries)
+                    Debug( 9,"Retry t_pos=%" PRId64 ", l_pos=%" PRId64 ", t_pts=%" PRId64 ", l_pts=%" PRId64 "\n", last_packet_pos, packet->pos, last_packet_pts, packet->pts);
                 is->seek_req = 0;
             }
             /*
@@ -2308,6 +2305,7 @@ nextpacket:
 
                     if ((live_tv && retries < live_tv_retries) /* || (selftest == 3 && retries == 0) */)
                     {
+                        double frame_delay = av_q2d(is->video_st->codec->time_base) * is->video_st->codec->ticks_per_frame;
 //                    uint64_t retry_target;
                         if (retries == 0)
                         {
@@ -2315,7 +2313,7 @@ nextpacket:
                                 retry_target = selftest_target;
 //                        retry_target = avio_tell(is->pFormatCtx->pb);
                             else
-                                retry_target = is->video_clock;
+                                retry_target = is->video_clock + frame_delay;
                         }
                         file_close();
                         Debug( 1,"\nRetry=%d at frame=%d, time=%8.2f seconds\n", retries, framenum, retry_target);
