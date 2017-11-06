@@ -83,6 +83,8 @@ def generate_xml(stem, lines, img_size ):
         append_xml_node_attr('ymax', parent=bndbox, text=str(y2))
     return doc
 if __name__ == '__main__':
+    binary_target = "generate_text_in_image"
+    run_sys_command(("make %s")%(binary_target))
     img_size=[640, 480, 3]
     _outdir="TextDataset"
     _dest_label_dir, _dest_img_dir, _dest_set_dir = build_voc_dirs(_outdir)

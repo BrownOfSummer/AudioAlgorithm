@@ -1,0 +1,9 @@
+This is attempt to generate training images for text detection and recognition
+## generate_text_in_image.cpp 
+This scrip is complete with opencv, and will generate letters on the random background image, with the size and color of letter is also random
+## generate_xml_annotation.py
+Read the couts of generate_text_in_image and generate xml for each image, as the type of VOC.
+Call python generate_xml_annotation.py:
+    (1) first, generate dirs
+    (2) generate_text_in_image in /dirs/JPEGImages
+    (3) generate_xml_annotation in /dirs/Annotations

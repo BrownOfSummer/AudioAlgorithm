@@ -39,10 +39,10 @@ int main(int argc, char *argv[])
     int flag = Drawing_Random_Filled_Polygons( img, 50, rng );
     if( flag != 0 ) return -1;
 
-    int fontFace = 5;
-    int thickness=3;
+    int fontFace = 5; // text type
+    int thickness=3; // text line thickness
     int baseline = 0;
-    int text_num = rng.uniform(5, 11); //5~10 chars
+    int text_num = rng.uniform(5, 11); //5~10 chars, generate 5~10 letters on one image
     for(int i = 0; i < text_num; i ++) {
         int text_class = rng.uniform(0, 62);
         string text(1, texts[text_class]);
@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
         }
         else{
             //fprintf(fp, "%d %d %d %d %d\n", textStart.x, textStart.y, textEnd.x, textEnd.y, text_class + 1);
+            /* python scrips with read this cout for xml */
             cout<<texts[text_class]<<" "<<textStart.x<<" "<<textStart.y<<" "<<textEnd.x<<" "<<textEnd.y<<endl;
         }
 
