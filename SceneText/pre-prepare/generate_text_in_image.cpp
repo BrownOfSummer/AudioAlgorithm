@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
         }
         else{
             //fprintf(fp, "%d %d %d %d %d\n", textStart.x, textStart.y, textEnd.x, textEnd.y, text_class + 1);
-            cout<<textStart.x<<" "<<textStart.y<<" "<<textEnd.x<<" "<<textEnd.y<<" "<<text_class + 1<<endl;
+            cout<<texts[text_class]<<" "<<textStart.x<<" "<<textStart.y<<" "<<textEnd.x<<" "<<textEnd.y<<endl;
         }
 
     }
