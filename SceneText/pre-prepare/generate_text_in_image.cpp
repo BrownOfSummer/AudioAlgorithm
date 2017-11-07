@@ -31,8 +31,9 @@ int main(int argc, char *argv[])
     ,'U','V','W','X','Y','Z',
     'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t',
     'u','v','w','x','y','z'};
-    //char texts2[] = {'C','c','K','k','O','o','U','u','S','s','V', 'v', 'W', 'w', 'X', 'x', 'Z', 'z'};
-    srand(time(NULL));
+    //char texts2[] = {'C','c','K','k','O','o','P','p','U','u','S','s','V', 'v', 'W', 'w', 'X', 'x', 'Z', 'z'};
+    //srand(time(NULL));
+    srand( getTickCount() );
     //RNG rng( 0xFFFFFFFF );
     RNG rng( rand() );
     Mat img(HEIGHT, WIDTH, CV_8UC3, Scalar::all(0));
@@ -52,7 +53,8 @@ int main(int argc, char *argv[])
         int x = rng.uniform(thickness + 2, WIDTH - textSize.width);
         int y = rng.uniform(textSize.height + thickness + 2, HEIGHT);
         Point textOrg(x, y);
-        Point textStart = textOrg + Point(0, -textSize.height);
+        //Point textStart = textOrg + Point(0, -textSize.height);
+        Point textStart = textOrg + Point(0, -textSize.height - thickness);
         Point textEnd = textOrg + Point(textSize.width, baseline);
 
         //putText(img, text, textOrg, fontFace, fontScale, Scalar::all(255), thickness, 8, false);
