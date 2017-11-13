@@ -69,11 +69,13 @@ def generate_xml(stem, lines, img_size ):
         cls = splitted_line[0]
 
         obj = append_xml_node_attr('object', parent=annotation)
-        x1, y1, x2, y2 = int(splitted_line[1]) + 1, int(splitted_line[2]) + 1, int(splitted_line[3]) + 1, int(splitted_line[4]) + 1
-        truncated = float(0)
-        difficult = 1
+        #x1, y1, x2, y2 = int(splitted_line[1]) + 1, int(splitted_line[2]) + 1, int(splitted_line[3]) + 1, int(splitted_line[4]) + 1
+        x1, y1, x2, y2 = int(splitted_line[1]), int(splitted_line[2]), int(splitted_line[3]), int(splitted_line[4])
+        truncated = int(0)
+        difficult = int(0)
         append_xml_node_attr('name', parent=obj, text=cls)
-        append_xml_node_attr('pose', parent=obj, text='Unspecified')
+        append_xml_node_attr('pose', parent=obj, text='Frontal') # Unspecified, Frontal, Rear, Left, Right
+        append_xml_node_attr('occluded', parent=obj, text='0')
         append_xml_node_attr('truncated', parent=obj, text=str(truncated))
         append_xml_node_attr('difficult', parent=obj, text=str(difficult))
         bndbox = append_xml_node_attr('bndbox', parent=obj)
