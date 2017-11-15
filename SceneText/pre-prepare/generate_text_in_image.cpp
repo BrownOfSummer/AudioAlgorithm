@@ -15,7 +15,7 @@ using namespace std;
 using namespace cv;
 #define WIDTH 640
 #define HEIGHT 480
-
+#define TOTAL_TEXT_CLASS 52
 /// Function headers
 static Scalar randomColor( RNG& rng );
 int Drawing_Random_Filled_Polygons( Mat image, int number, RNG rng );
@@ -29,11 +29,10 @@ int main(int argc, char *argv[])
     char texts[] = {'1','2','3','4','5','6','7','8','9','0'
     ,'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'
     ,'U','V','W','X','Y','Z',
-    'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t',
-    'u','v','w','x','y','z'};
-    //char texts2[] = {'C','c','K','k','O','o','P','p','U','u','S','s','V', 'v', 'W', 'w', 'X', 'x', 'Z', 'z'};
+    'a','b','d','e','f','g','h','i','j','l','m','n','q','r','t','y'};
+    //char texts2[] = {'C','c','K','k','O','o','U','u','S','s','V', 'v', 'W', 'w', 'X', 'x', 'Z', 'z'};
     //srand(time(NULL));
-    srand( getTickCount() );
+    srand(getTickCount());
     //RNG rng( 0xFFFFFFFF );
     RNG rng( rand() );
     Mat img(HEIGHT, WIDTH, CV_8UC3, Scalar::all(0));
@@ -45,7 +44,7 @@ int main(int argc, char *argv[])
     int baseline = 0;
     int text_num = rng.uniform(5, 11); //5~10 chars, generate 5~10 letters on one image
     for(int i = 0; i < text_num; i ++) {
-        int text_class = rng.uniform(0, 62);
+        int text_class = rng.uniform(0, TOTAL_TEXT_CLASS);
         string text(1, texts[text_class]);
         double fontScale = rng.uniform(2, 5);
         Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
@@ -53,7 +52,6 @@ int main(int argc, char *argv[])
         int x = rng.uniform(thickness + 2, WIDTH - textSize.width);
         int y = rng.uniform(textSize.height + thickness + 2, HEIGHT);
         Point textOrg(x, y);
-        //Point textStart = textOrg + Point(0, -textSize.height);
         Point textStart = textOrg + Point(0, -textSize.height - thickness);
         Point textEnd = textOrg + Point(textSize.width, baseline);
 
@@ -73,6 +71,10 @@ int main(int argc, char *argv[])
         else{
             //fprintf(fp, "%d %d %d %d %d\n", textStart.x, textStart.y, textEnd.x, textEnd.y, text_class + 1);
             /* python scrips with read this cout for xml */
+            textStart.x = MAX(textStart.x, 1);
+            textStart.y = MAX(textStart.y, 1);
+            textEnd.x = MIN(textEnd.x, WIDTH - 1);
+            textEnd.y = MIN(textEnd.y, HEIGHT - 1);
             cout<<texts[text_class]<<" "<<textStart.x<<" "<<textStart.y<<" "<<textEnd.x<<" "<<textEnd.y<<endl;
         }
 

@@ -74,7 +74,8 @@ def generate_xml(stem, lines, img_size ):
         truncated = int(0)
         difficult = int(0)
         append_xml_node_attr('name', parent=obj, text=cls)
-        append_xml_node_attr('pose', parent=obj, text='Frontal') # Unspecified, Frontal, Rear, Left, Right
+        #append_xml_node_attr('pose', parent=obj, text='Unspecified')
+        append_xml_node_attr('pose', parent=obj, text='Frontal')
         append_xml_node_attr('occluded', parent=obj, text='0')
         append_xml_node_attr('truncated', parent=obj, text=str(truncated))
         append_xml_node_attr('difficult', parent=obj, text=str(difficult))
@@ -90,7 +91,7 @@ if __name__ == '__main__':
     img_size=[640, 480, 3]
     _outdir="TextDataset"
     _dest_label_dir, _dest_img_dir, _dest_set_dir = build_voc_dirs(_outdir)
-    for stem in ["%04d" % i for i in range(10)]:
+    for stem in ["%04d" % i for i in range(7000)]:
         out_img_name=os.path.join(_dest_img_dir, stem + '.jpg')
         out_xml_name=os.path.join(_dest_label_dir, stem + '.xml')
         couts = run_sys_command(("./generate_text_in_image %s")%(out_img_name))
