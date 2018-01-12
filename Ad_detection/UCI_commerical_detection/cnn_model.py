@@ -122,6 +122,9 @@ class AdCNN(object):
             self.loss = cross_entropy
             #self.loss = tf.add(cross_entropy, l2_reg_lambda * l2_loss, name='loss')
         
+
+        self.train_op = tf.train.AdamOptimizer(0.001).minimize(self.loss)
+        
         with tf.name_scope('accuracy'):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
