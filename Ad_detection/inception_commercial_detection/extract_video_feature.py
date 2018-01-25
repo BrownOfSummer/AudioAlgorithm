@@ -10,7 +10,7 @@ import glob
 
 from tqdm import tqdm
 
-#model = Extractor()
+model = Extractor()
 
 ROOT_DIR = '../../data' # path to UCF-101
 VIDEO_FEATURE_DIR = './VIDEO_FEATURE_DIR' # path to save video features
@@ -67,10 +67,12 @@ if __name__ == '__main__':
         extract_video_features(VIDEO_FILES)
         print('Totally costs {}s'.format( time.time() - start_time ))
     else:
-        video_path = '../../data/UCF-101/Hammering/v_Hammering_g01_c01.avi'
+        video_path = '/Users/li_pengju/SomeDownload/Dataset/UCF101/UCF-101/Hammering/v_Hammering_g01_c01.avi'
         start = time.time()
         sequences, info = generate_video_features(video_path, model)
-        with open('tmp.incep3vdna','wb') as f:
+        dna_path = video_path.split('/')[-1]
+        dna_path = os.path.splitext(dna_path)[0] + '.incep3vdna'
+        with open(dna_path,'wb') as f:
             pickle.dump([sequences,info], f)
         print("cost {}s".format(time.time() - start))
         print(len(sequences), len(sequences[0]))
