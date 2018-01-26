@@ -183,3 +183,19 @@ def vdna_to_sample(film, commercial, sample_size=4, shuffle=False):
         shuffled_data_label = data_label
     
     return shuffled_data_label #ndarray
+
+def train_sample_iter():
+    with open(film_vdna_files, 'r') as f:
+        films = f.readlines()
+    with open(commercial_vdna_files, 'r') as f:
+        coms = f.readlines()
+    lens = min( len(films), len(coms) )
+    for _ in range(EPOCH):
+        random.shuffle(films)
+        random.shuffle(coms)
+
+        train_film_paths = films[:lens]
+        train_com_paths = coms[:lens]
+
+        for i in range(lens):
+            pass
