@@ -1,0 +1,11 @@
+Call c function in python
+    (1) ctypes and .so
+        gcc hello_world.c  -fPIC -shared -o hello_world.so
+        in python:
+            from ctypes import cdll
+            c_lib=cdll.LoadLibrary('./hello_world.so')
+            c_lib.hello_world()
+    (2) swig ()
+        write example.i for generating.
+        swig -python example.i, will get example_wrap.c and example.py
+        gcc -Wall -g -I /usr/include/python2.7/ -lpython2.7 -fPIC -shared example.c example_wrap.c -o _example.so

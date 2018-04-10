@@ -1,0 +1,6 @@
+(1) swig -python example.i
+    swig -python -o example_wrap.c example.i
+        then will get example.py and example_wrap.c
+(2) gcc -Wall -g -I /usr/include/python2.7/ -lpython2.7 -fPIC -shared example.c example_wrap.c -o _example.so
+
+then, the example.py can be import and call function in _example.so
