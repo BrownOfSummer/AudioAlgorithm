@@ -24,18 +24,31 @@ int main(int argc, char *argv[])
     vector<Point2f> imgP, referenceP;
     getMatchPoints(im, reference, imgP, referenceP);
     
-    Mat imRegistered, warpMatrix;
-    cout<<"Get warpMatrix ...\n";
-    getWarpMatrixORB(imgP, referenceP, warpMatrix, MOTION_AFFINE);
-    cout<<warpMatrix<<endl;
-    if(warpMatrix.empty()) {
-        cout<<"Can not get warp matrix !\n";
-        return 0;
+    Mat imRegistered1, imRegistered2;
+    Mat warpMatrix1, warpMatrix2;
+    const int warp_mode = MOTION_HOMOGRAPHY;
+
+    cout<<"Get warpMatrix ORB...\n";
+    getWarpMatrixORB(imgP, referenceP, warpMatrix1, warp_mode);
+    cout<<warpMatrix1<<endl;
+    
+    cout<<"Get warpMatrix ECC...\n";
+    getWarpMatrixECC(im, reference, warpMatrix2, warp_mode);
+    cout<<warpMatrix2<<endl;
+    
+    if(warpMatrix1.empty()) {
+        cout<<"Can not get warp matrix ORB !\n";
     }
-    cout<<"Warp images ...\n";
-    warpImage(im, imRegistered, reference.size(), warpMatrix, MOTION_AFFINE);
-    cout<<"Saving aligned image: aligned.jpg\n";
-    imwrite("aligned.jpg", imRegistered);
-    cout<<"Estimated homography:\n";
+    else {
+        warpImage(im, imRegistered1, reference.size(), warpMatrix1, warp_mode);
+    }
+    if(warpMatrix2.empty()) {
+        cout<<"Can not get warp matrix ECC !\n";
+    }
+    else {
+        warpImage(im, imRegistered2, reference.size(), warpMatrix2, warp_mode);
+    }
+    if( !imRegistered1.empty() ) imwrite("aligned1.jpg", imRegistered1);
+    if( !imRegistered2.empty() ) imwrite("aligned2.jpg", imRegistered2);
     return 0;
 }

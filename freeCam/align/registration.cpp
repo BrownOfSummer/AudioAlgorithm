@@ -109,16 +109,88 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
     // Find homography.
     if( method ==  MOTION_HOMOGRAPHY)
         warpMatrix = findHomography( imgP, referenceP, RANSAC );
-    else
-        warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
-        //warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
+    else 
+    {
+        //warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
+        warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
         //warpMatrix = estimateRigidTransform( imgP, referenceP, false);
-
-    // Use homography to warp image.
-    //warpPerspective(img, imgWrap, warpMatrix, reference.size());
+    }
     return;
 }
 
+/*
+ * Calc the gradients of a image using sobel method.
+ * Paras:
+ *      src: gray image to calc gradient.
+ *      return the sobel gradient
+ */
+Mat getGradient(Mat src)
+{
+    Mat src_gray;
+    if(src.channels() != 1) cvtColor(src, src_gray, CV_BGR2GRAY);
+    else src.copyTo(src_gray);
+
+	Mat grad_x, grad_y, grad;
+	Mat abs_grad_x, abs_grad_y;
+
+	int scale = 1;	
+	int delta = 0;
+	int ddepth = CV_32FC1; ;
+    
+    // Calculate the x and y gradients using Sobel operator
+
+	Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+	convertScaleAbs( grad_x, abs_grad_x );
+
+	Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+	convertScaleAbs( grad_y, abs_grad_y );
+
+    // Combine the two gradients
+	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
+	return grad; 
+}
+
+/* Calc the warp_matrix to align img to reference.
+ * Paras:
+ *      img, input, image to be warp;
+ *      reference, input, image as template;
+ *      warpMatrix, output, the warp matrix;
+ *      warp_mode, input:
+ *          MOTION_AFFINE
+ *          MOTION_EUCLIDEAN
+ *          MOTION_TRANSLATION
+ *          MOTION_HOMOGRAPHY
+ *      four transfor methods.
+ */
+void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mode)
+{
+    // Set a 2x3 or 3x3 warp matrix depending on the motion model.
+    // Initialize the matrix to identity
+    if ( warp_mode == MOTION_HOMOGRAPHY )
+        warpMatrix = Mat::eye(3, 3, CV_32F);
+    else
+        warpMatrix = Mat::eye(2, 3, CV_32F);
+
+    // Specify the number of iterations.
+    int number_of_iterations = 100;
+    
+    // Specify the threshold of the increment
+    // in the correlation coefficient between two iterations
+    double termination_eps = 1e-8;
+    
+    // Define termination criteria
+    TermCriteria criteria (TermCriteria::COUNT+TermCriteria::EPS, number_of_iterations, termination_eps);
+
+    // Run the ECC algorithm. The results are stored in warp_matrix.
+    findTransformECC(
+                     getGradient(reference),
+                     getGradient(img),
+                     warpMatrix,
+                     warp_mode,
+                     criteria
+                 );
+    return;
+}
 
 /*
  *  Warp the image with the warpMatrix.
