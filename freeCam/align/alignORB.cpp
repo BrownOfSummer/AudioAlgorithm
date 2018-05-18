@@ -9,7 +9,17 @@ using namespace cv::xfeatures2d;
 const int MAX_FEATURES = 500;
 const float GOOD_MATCH_PERCENT = 0.15f;
 
-
+void drawPoints(Mat &img, vector<Point2f> points, Scalar color)
+{
+    if(points.empty()) return;
+    //cout<<"Total "<<points.size()<<" points\n";
+    for(size_t i = 0; i < points.size(); i ++)
+    {
+        int x = int(points[i].x);
+        int y = int(points[i].y);
+        circle(img, Point2d(x,y), 5, color);
+    }
+}
 void alignImages(Mat &im1, Mat &im2, Mat &im1Reg, Mat &h)
 
 {
@@ -56,6 +66,13 @@ void alignImages(Mat &im1, Mat &im2, Mat &im1Reg, Mat &h)
     points2.push_back( keypoints2[ matches[i].trainIdx ].pt );
   }
   
+  Mat image1, image2;
+  im1.copyTo(image1);
+  im2.copyTo(image2);
+  drawPoints(image1, points1, Scalar(255,0,0));
+  drawPoints(image2, points2, Scalar(0,255,0));
+  imwrite("00goodpoint.jpg", image1);
+  imwrite("01goodpoint.jpg", image2);
   // Find homography
   h = findHomography( points1, points2, RANSAC );
   

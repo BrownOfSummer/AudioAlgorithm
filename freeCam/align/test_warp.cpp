@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     warpImage( src, src_warped, src.size(), warp_matrix, warpType );
     Mat reference = src;
 
-    Mat warp1, warp2;
+    Mat warp1, warp2, warp3;
     vector<Point2f> imgP, referenceP;
     getMatchPoints(src_warped, reference, imgP, referenceP);
     getWarpMatrixORB(imgP, referenceP, warp1, warpType);
@@ -70,11 +70,16 @@ int main(int argc, char *argv[])
     imshow("reference", reference);
     imshow("src_warped", src_warped);
 
-    Mat warpImg1, warpImg2;
+    alignImages(src_warped, reference, warp3, warpType);
+    cout<<"OOO:\n"<<warp3<<endl;
+    
+    Mat warpImg1, warpImg2, warpImg3;
     warpImage(src_warped, warpImg1, reference.size(), warp1, warpType);
     warpImage(src_warped, warpImg2, reference.size(), warp2, warpType);
+    warpImage(src_warped, warpImg3, reference.size(), warp3, warpType);
     imshow("ORB-warp", warpImg1);
     imshow("ECC-warp", warpImg2);
+    imshow("OOO-warp", warpImg3);
     waitKey();
     return 0;
 }

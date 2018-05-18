@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     
     Mat imRegistered1, imRegistered2;
     Mat warpMatrix1, warpMatrix2;
-    const int warp_mode = MOTION_HOMOGRAPHY;
+    const int warp_mode = MOTION_EUCLIDEAN;
 
     cout<<"Get warpMatrix ORB...\n";
     getWarpMatrixORB(imgP, referenceP, warpMatrix1, warp_mode);

@@ -21,3 +21,4 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
 void warpImage(Mat img, Mat &imgWrap, Size outSize, Mat warpMatrix, const int method);
 Mat getGradient(Mat src);
 void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mode);
+void alignImages(Mat &im1, Mat &im2, Mat &h, const int mode);

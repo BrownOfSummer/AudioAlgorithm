@@ -79,9 +79,11 @@ void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vec
     vlog("good matches.size() = %d\n", matches.size());
 
     // Draw imgMatches.
+#if DEBUG
     Mat imgMatches;
     drawMatches(img, keypoints1, reference, keypoints2, matches, imgMatches);
     imwrite("matches.jpg", imgMatches);
+#endif
     // Extract location of good matches.
     // std::vector<Point2f> points1, points2;
     for(size_t i = 0; i < matches.size(); i ++)
@@ -184,8 +186,8 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
 
     // Run the ECC algorithm. The results are stored in warp_matrix.
     findTransformECC(
-                     getGradient(img),
                      getGradient(reference),
+                     getGradient(img),
                      warpMatrix,
                      warp_mode,
                      criteria
