@@ -101,7 +101,8 @@ void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vec
  *                          MOTION_AFFINE
  *                          MOTION_EUCLIDEAN
  *                          MOTION_TRANSLATION
- *                          MOTION_HOMOGRAPHY 
+ *                          MOTION_HOMOGRAPHY
+ *      return: warpMatrix; referenceP = warpMatrix * imgP
  */
 void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP, Mat &warpMatrix, const int method)
 {
@@ -111,6 +112,7 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
         warpMatrix = findHomography( imgP, referenceP, RANSAC );
     else 
     {
+        // from destination to reference: M * imgP -> referenceP;
         //warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
         warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
         //warpMatrix = estimateRigidTransform( imgP, referenceP, false);
@@ -152,8 +154,8 @@ Mat getGradient(Mat src)
 
 /* Calc the warp_matrix to align img to reference.
  * Paras:
- *      img, input, image to be warp;
- *      reference, input, image as template;
+ *      img,        input, image to be warp;
+ *      reference,  input, image as template;
  *      warpMatrix, output, the warp matrix;
  *      warp_mode, input:
  *          MOTION_AFFINE
@@ -172,10 +174,9 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
         warpMatrix = Mat::eye(2, 3, CV_32F);
 
     // Specify the number of iterations.
-    int number_of_iterations = 100;
+    int number_of_iterations = 50;
     
-    // Specify the threshold of the increment
-    // in the correlation coefficient between two iterations
+    // Specify the threshold of the increment in the correlation coefficient between two iterations
     double termination_eps = 1e-8;
     
     // Define termination criteria
@@ -183,8 +184,8 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
 
     // Run the ECC algorithm. The results are stored in warp_matrix.
     findTransformECC(
-                     getGradient(reference),
                      getGradient(img),
+                     getGradient(reference),
                      warpMatrix,
                      warp_mode,
                      criteria
@@ -205,13 +206,18 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
  *                          MOTION_TRANSLATION
  *                          MOTION_HOMOGRAPHY 
  */
-void warpImage(Mat &img, Mat &imgWarp, Size outSize, Mat &warpMatrix, const int method)
+void warpImage(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int method)
 {
     // Use homography to warp image.
     if( method == MOTION_HOMOGRAPHY )
+    {
         warpPerspective(img, imgWarp, warpMatrix, outSize);
+        //warpPerspective(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+    }
     else
+    {
         warpAffine(img, imgWarp, warpMatrix, outSize);
-    //warpAffine(img, imgWarp, warpMatrix, outSize, INTER_LINEAR, BORDER_TRANSPARENT);
+        //warpAffine(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+    }
     return;
 }
