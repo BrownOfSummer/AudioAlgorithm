@@ -1,0 +1,276 @@
+// Intend to segment image.
+#include<iostream>
+#include<opencv2/opencv.hpp>
+using namespace std;
+using namespace cv;
+#ifndef DEBUG
+#define DEBUG 1
+#endif
+
+void vlog(const char *format,...);
+void vlog(const char *format,...) {
+#if DEBUG
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+#endif
+}
+/*
+ * Get the edge of a gray image, use Canny.
+ * Input:   image,      gray;
+ *          edgeThresh, threshold for the hysteresis procedure.
+ *          use_scharr, select between sobel or Scharr;
+ * OutPut: edge, output edge map; single channels 8-bit image, which has the same size as image.
+ */
+void getEdges(Mat image, Mat &edge, int edgeThresh, bool use_scharr)
+{
+    Mat gray, blurImage;
+    if(image.channels() > 1) cvtColor(image, gray, CV_BGR2GRAY);
+    else gray = image;
+    blur(gray, blurImage, Size(3,3));
+    if( ! use_scharr ) {
+        // use sobel inner.
+        Canny(blurImage, edge, edgeThresh, edgeThresh * 3, 3);
+    }
+    else {
+        /// Canny detector with scharr
+        Mat dx,dy;
+        Scharr(blurImage, dx, CV_16S, 1, 0);
+        Scharr(blurImage, dy, CV_16S, 0, 1);
+        Canny( dx, dy, edge, edgeThresh, edgeThresh * 3 );
+    }
+    return;
+}
+
+/*
+ * segment the image with otsu threshold, and edges;
+ * Input:   gray img;
+ * OutPut:  binary mask with same size of img;
+ */
+void roughThreshSegment(Mat img, Mat &mask)
+{
+    Mat gray, otsuArea, adapArea, edge, dst;
+    if(img.channels() > 1) cvtColor(img, gray, CV_BGR2GRAY);
+    else gray = img;
+    getEdges(gray, edge, 30, false);
+    //dilate(edge, edge, Mat(), Point(-1,-1));
+    //MORPH_CROSS, MORPH_ELLIPSE, MORPH_RECT
+    //Mat kernel = getStructuringElement(MORPH_CROSS, Size(3, 3), Point(1,1));
+    //morphologyEx(edge, edge, MORPH_CLOSE, kernel, Point(1,1), 2 );
+    morphologyEx(edge, edge, MORPH_CLOSE, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+
+    GaussianBlur(gray, gray, Size(3, 3), 0, 0, BORDER_DEFAULT);
+    
+    threshold(gray, otsuArea, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
+    //dilate(otsuArea, otsuArea, Mat(), Point(-1,-1));
+    morphologyEx(otsuArea, otsuArea, MORPH_CLOSE, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+    
+    adaptiveThreshold(gray, adapArea, 255, THRESH_BINARY_INV, ADAPTIVE_THRESH_GAUSSIAN_C, 3, 3);
+    //dilate(adapArea, adapArea, Mat(), Point(-1,-1));
+    morphologyEx(adapArea, adapArea, MORPH_CLOSE, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+
+    bitwise_or(adapArea, otsuArea, dst, noArray());
+    bitwise_or(dst, edge, dst, noArray());
+
+    //Execute morphological-close
+    //morphologyEx(dst, dst, MORPH_CLOSE, Mat::ones(9,9,CV_8SC1), Point(4,4), 2 );
+    //morphologyEx(dst, dst, MORPH_OPEN, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+    
+    mask = dst;
+    return;
+}
+/*
+ * find the max connected area in the binary image.
+ */
+Mat singleConnetedDomain( Mat binary )
+{
+    // Maximum connected domain
+    int connectivity = 8;
+    Mat labels, centroids, stats;
+    connectedComponentsWithStats(binary, labels, stats, centroids, connectivity);
+    if(stats.rows < 2) return binary;
+    int areaLabel = 0, areaMax = 0;
+    for(int r = 1; r < stats.rows; r ++)
+    {
+        int maxPix = stats.at<int>(r, 4);
+        if( maxPix > areaMax ) {
+            areaMax = maxPix;
+            areaLabel = r;
+        }
+    }
+    Mat ret = Mat::zeros(binary.size(), CV_8UC1);
+    for(int x = 0; x < binary.rows; x ++)
+        for(int y = 0; y < binary.cols; y++)
+            ret.at<uchar>(x, y) = labels.at<int>(x,y) == areaLabel ? 255 : 0;
+    return ret;
+}
+
+/*
+ * find the max area contours in the binary image and return the index in the contours vector;
+ * Input:   binary, binary image.
+ *          contours, hierarchy, to save contours; 
+ * Return: max contours area index;
+ */
+int getAreaContours(Mat binary, vector<vector<Point> > &contours, vector<Vec4i> &hierarchy)
+{
+    //vector<vector<Point> > contours;
+    //vector<Vec4i> hierarchy;
+    if( !contours.empty() ) contours.clear();
+    if( !hierarchy.empty() ) hierarchy.clear();
+
+    findContours( binary, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
+    
+    if( contours.size() < 1) return -1;
+    
+    int largestComp = 0;
+    double maxArea = 0;
+    for(int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+    {
+        const vector<Point>& c = contours[idx];
+        double area = fabs(contourArea(Mat(c)));
+        if( area > maxArea )
+        {
+            maxArea = area;
+            largestComp = idx;
+        }
+    }
+
+    //return contours[largestComp];
+    return largestComp;
+}
+
+/*
+ * find the max connected area in the binary image with contours.
+ */
+Mat singleConnetedDomainContour(Mat binary)
+{
+    vector<vector<Point> >contours;
+    vector<Vec4i> hierarchy;
+    int maxAreaIdx = getAreaContours(binary, contours, hierarchy);
+    if( maxAreaIdx < 0 ) return binary;
+    Mat ret = Mat::zeros( binary.size(), CV_8UC1 );
+    //drawContours(ret, contours, 0, Scalar::all(255), -1);
+    drawContours( ret, contours, maxAreaIdx, Scalar::all(255), FILLED, LINE_8, hierarchy );
+
+    return ret;
+}
+
+/*
+ * fill the black holes in the binary image;
+ */
+Mat fillHole(Mat binary)
+{
+    morphologyEx(binary, binary, MORPH_CLOSE, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+    Mat filled;
+    binary.copyTo(filled);
+    floodFill( filled, Point(0,0), Scalar(255) );
+    bitwise_not( filled, filled );
+    bitwise_or(filled, binary, filled, noArray());
+    //morphologyEx(filled, filled, MORPH_OPEN, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
+    return filled;
+}
+
+/*
+ * refine the rough segment.
+ */
+Mat refineBinarySegments(Mat binary)
+{
+    //Mat new_mask = singleConnetedDomainContour(binary);
+    Mat new_mask = singleConnetedDomain(binary);
+    new_mask = fillHole( new_mask );
+    //vector<vector<Point> >contours;
+    //vector<Vec4i> hierarchy;
+    //int maxAreaIdx = getAreaContours(new_mask, contours, hierarchy);
+    //vector<Point> approx;
+    //approxPolyDP(Mat(contours[maxAreaIdx]), approx, arcLength(Mat(contours[maxAreaIdx]), true)*0.02, true);
+    //Mat temp = Mat::zeros( binary.size(), CV_8UC3 );
+    //fillConvexPoly(temp, approx, Scalar(255, 0, 0));
+    return new_mask;
+}
+void getShowContours(Mat binary)
+{
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours( binary, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
+
+    Mat dst = Mat::zeros(binary.size(), CV_8UC3);
+
+    if( contours.size() == 0 ) {
+        vlog("No contours !\n");
+        return;
+    }
+    // iterate through all the top-level contours,
+    // draw each connected component with its own random color
+    int largestComp = 0, cnt = 0;
+    double maxArea = 0;
+    vlog("Draw each contours, ESC to break:\n");
+    for( int idx = 0; idx >= 0; idx = hierarchy[idx][0] )
+    {
+        cnt ++;
+        int b = theRNG().uniform(0, 255);
+        int g = theRNG().uniform(0, 255);
+        int r = theRNG().uniform(0, 255);
+        Scalar color = Scalar((uchar)b, (uchar)g, (uchar)r);
+
+        const vector<Point>& c = contours[idx];
+        double area = fabs(contourArea(Mat(c)));
+        if( area > maxArea )
+        {
+            maxArea = area;
+            largestComp = idx;
+        }
+        drawContours( dst, contours, idx, color, FILLED, LINE_8, hierarchy );
+        imshow("contours", dst);
+        char key = waitKey();
+        if( key == 27 ) break;
+    }
+    vlog("%d contours been plot.\nThe largest one shown in green.\n");
+    Scalar color( 0, 255, 0 );
+    drawContours( dst, contours, largestComp, color, FILLED, LINE_8, hierarchy );
+    imshow("contours", dst);
+    waitKey();
+}
+
+void refineSegments(const Mat img, Mat mask, Mat& dst)
+{
+    int niters = 3;
+
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+
+    Mat temp;
+    //Mat kernel = Mat::ones(3,3,CV_8UC1);
+    //dilate(mask, mask, kernel);
+
+    dilate(mask, temp, Mat(), Point(-1,-1), niters);
+    //erode(temp, temp, Mat(), Point(-1,-1), niters);
+    //dilate(temp, temp, Mat(), Point(-1,-1), niters);
+    imshow("mask", temp);
+    waitKey();
+
+    findContours( temp, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
+
+    dst = Mat::zeros(img.size(), CV_8UC3);
+
+    if( contours.size() == 0 )
+        return;
+
+    // iterate through all the top-level contours,
+    // draw each connected component with its own random color
+    int idx = 0, largestComp = 0;
+    double maxArea = 0;
+
+    for( ; idx >= 0; idx = hierarchy[idx][0] )
+    {
+        const vector<Point>& c = contours[idx];
+        double area = fabs(contourArea(Mat(c)));
+        if( area > maxArea )
+        {
+            maxArea = area;
+            largestComp = idx;
+        }
+    }
+    Scalar color( 146, 168, 209 );
+    drawContours( dst, contours, largestComp, color, FILLED, LINE_8, hierarchy );
+}
