@@ -1,10 +1,3 @@
-/*************************************************************************
-    > File Name: utils.h
-    > Author: li_pengju
-    > Mail: li_pengju@vobile.cn
-    > Copyright (c) Vobile Inc. All Rights Reserved
-    > Created Time: 2018-05-26 15:08:15
- ************************************************************************/
 
 #include<iostream>
 #include<opencv2/opencv.hpp>
