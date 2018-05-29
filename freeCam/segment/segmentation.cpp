@@ -1,5 +1,7 @@
 // Intend to segment image.
 #include<iostream>
+#include<vector>
+#include<string>
 #include<opencv2/opencv.hpp>
 using namespace std;
 using namespace cv;
@@ -187,6 +189,68 @@ Mat refineBinarySegments(Mat binary)
     //Mat temp = Mat::zeros( binary.size(), CV_8UC3 );
     //fillConvexPoly(temp, approx, Scalar(255, 0, 0));
     return new_mask;
+}
+/*
+ * Demonstrate the threshold segmentation with color;
+ * Input:   original,       3 channels BGR image.
+ *          colorThresh,    6 colorThresh: [minBGR, maxBGR] | [minHSV | maxHSV] | [minLab, maxLab] | [minYCrCb | maxYCrCb]
+ *                          example:[0, 0, 0, 255, 255, 255]
+ *          mode:           BGR | HSV | YCB | YCrCb | LAB | Lab
+ * Return:  BRG image with color and black background.
+ */
+Mat colorThreshSegment(Mat original, const vector<int> colorThresh, const string mode)
+{
+    if( original.channels() != 3 ) {
+        vlog("Input image must be BGR 3 channels\n");
+        return original;
+    }
+    if( colorThresh.size() != 6 ) {
+        vlog("Input colorThresh must be 6 elements:\n");
+        vlog("[minBGR, maxBGR] | [minHSV | maxHSV] | [minLab, maxLab] | [minYCrCb | maxYCrCb]\n");
+        return original;
+    }
+    Mat ret = Mat::zeros( original.rows, original.cols, CV_8UC3 );
+    if( mode == "BGR" ) {
+        Mat maskBGR, imageBGR;
+        original.copyTo(imageBGR);
+        Scalar minBGR = Scalar(colorThresh[0], colorThresh[1], colorThresh[2]);
+        Scalar maxBGR = Scalar(colorThresh[3], colorThresh[4], colorThresh[5]);
+        // Create the mask using the min and max values obtained from trackbar and apply bitwise and operation to get the results
+        inRange(imageBGR, minBGR, maxBGR, maskBGR);
+        bitwise_and(original, original, ret, maskBGR);
+        return ret;
+    }
+    else if( mode == "HSV" ) {
+        Mat maskHSV, imageHSV;
+        cvtColor(original, imageHSV, COLOR_BGR2HSV);
+        Scalar minHSV = Scalar(colorThresh[0], colorThresh[1], colorThresh[2]);
+        Scalar maxHSV = Scalar(colorThresh[3], colorThresh[4], colorThresh[5]);
+        inRange(imageHSV, minHSV, maxHSV, maskHSV);
+        bitwise_and(original, original, ret, maskHSV);
+        return ret;
+    }
+    else if( mode == "LAB" || mode == "Lab" ) {
+        Mat maskLab, imageLab;
+        cvtColor(original, imageLab, COLOR_BGR2Lab);
+        Scalar minLab = Scalar(colorThresh[0], colorThresh[1], colorThresh[2]);
+        Scalar maxLab = Scalar(colorThresh[3], colorThresh[4], colorThresh[5]);
+        inRange(imageLab, minLab, maxLab, maskLab);
+        bitwise_and(original, original, ret, maskLab);
+        return ret;
+    }
+    else if( mode == "YCB" || mode == "YCrCb" ) {
+        Mat maskYCrCb, imageYCrCb;
+        cvtColor(original, imageYCrCb, COLOR_BGR2YCrCb);
+        Scalar minYCrCb = Scalar(colorThresh[0], colorThresh[1], colorThresh[2]);
+        Scalar maxYCrCb = Scalar(colorThresh[3], colorThresh[4], colorThresh[5]);
+        inRange(imageYCrCb, minYCrCb, maxYCrCb, maskYCrCb);
+        bitwise_and(original, original, ret, maskYCrCb);
+        return ret;
+    }
+    else {
+        vlog("mode type must be one of: BGR | HSV | LAB | Lab |YCB | YCrCb\n");
+        return original;
+    }
 }
 void getShowContours(Mat binary)
 {
