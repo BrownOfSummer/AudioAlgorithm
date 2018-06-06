@@ -252,6 +252,64 @@ Mat colorThreshSegment(Mat original, const vector<int> colorThresh, const string
         return original;
     }
 }
+/*
+ * Demonstrate the skin tone threshold to detect skin.
+ * two method provided, BGR + HSV or BGR + YCrCb, and the second is a little better in some case.
+ * Paras:
+ *      src,    Input, 3 channel BGR color image.
+ *      dst,    Output, same size with src, remove non-skin-tone pixels;
+ *      method, Input, < 0 for hsv, others for YCrCb
+ * Return:
+ *      mask, binary image with same size with src, skin-tone is marked as 255;
+ * Reference: https://arxiv.org/pdf/1708.02694.pdf
+ */
+Mat detectSkinTone(Mat src, Mat &dst, int method)
+{
+    Mat hsv, ycb;
+    dst = Mat::zeros(src.size(), CV_8UC3);
+    Mat mask = Mat::zeros(src.size(), CV_8UC1);
+    if(method < 1)
+    {
+        cvtColor(src, hsv, CV_BGR2HSV);
+        for(size_t i = 0; i < src.rows; i ++) {
+            for(size_t j = 0; j < src.cols; j++) {
+                Vec3b hsvPixel = hsv.at<Vec3b>(i, j);
+                Vec3b bgrPixel = src.at<Vec3b>(i, j);
+                int B = bgrPixel[0], G = bgrPixel[1], R = bgrPixel[2];
+                int H = hsvPixel[0], S = hsvPixel[1], V = hsvPixel[2];
+                if(     H >= 0 && H <= 50 && S >= 58 && S <= 174
+                        && R > 95 && G > 40 && B > 20 && R > G  && R > B && R - G > 15 ) {
+                    dst.at<Vec3b>(i, j) = src.at<Vec3b>(i, j);
+                    mask.at<uchar>(i, j) = 255;
+                }
+            }
+        }
+    }
+    else 
+    {
+        cvtColor(src, ycb, CV_BGR2YCrCb);
+        for(size_t i = 0; i < src.rows; i ++) {
+            for(size_t j = 0; j < src.cols; j ++) {
+                Vec3b ycbPixel = ycb.at<Vec3b>(i, j);
+                Vec3b bgrPixel = src.at<Vec3b>(i, j);
+                int B = bgrPixel[0], G = bgrPixel[1], R = bgrPixel[2];
+                int Y = ycbPixel[0], Cr = ycbPixel[1], Cb = ycbPixel[2];
+                if(     R > 95 && G > 40 && B > 20 && R > G && R > B && R - G > 15
+                        && Cr > 135 && Cb > 85 && Y > 80
+                        && Cr <= (1.5862 * Cb) + 20
+                        && Cr >= (0.3448 * Cb) + 76.2069
+                        && Cr >= (-4.5652 * Cb) + 234.5652
+                        && Cr <= (-1.15 * Cb) + 301.75
+                        && Cr <= (-2.2857 * Cb) + 432.85 ) {
+                    dst.at<Vec3b>(i, j) = src.at<Vec3b>(i, j);
+                    mask.at<uchar>(i, j) = 255;
+                }
+            }
+        }
+    }
+    
+    return mask;
+}
 void getShowContours(Mat binary)
 {
     vector<vector<Point> > contours;

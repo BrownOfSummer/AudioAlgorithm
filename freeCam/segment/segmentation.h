@@ -14,6 +14,7 @@ Mat singleConnetedDomainContour(Mat binary);
 Mat fillHole(Mat binary);
 Mat refineBinarySegments(Mat binary);
 Mat colorThreshSegment(Mat original, const vector<int> colorThresh, const string mode);
+Mat detectSkinTone(Mat src, Mat &dst, int method);
 void getShowContours(Mat binary);
 
 void refineSegments(const Mat img, Mat mask, Mat& dst);
