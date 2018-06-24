@@ -57,15 +57,16 @@ string result_name = "result.jpg";
 bool timelapse = false;
 int range_width = -1;
 
-bool load_find_features(vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, vector<Size> &full_img_sizes);
-bool load_find_features(vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, vector<Size> &full_img_sizes, double *work_scale, double *seam_scale, bool &is_work_scale_set, bool &is_seam_scale_set);
-bool get_pairwise_matches(vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches);
-bool estimate_adjuster_cameras(vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras, vector<double> &focals, float *warped_image_scale);
-bool generate_warp_creator(Ptr<WarperCreator> &warper_creator, string warp_type );
-bool warp_images(Ptr<WarperCreator> &warper_creator, vector<Mat> &images, vector<CameraParams> &cameras, float warped_image_scale, double seam_work_aspect,
+bool load_find_features(const vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, 
+        vector<Size> &full_img_sizes, double *work_scale, double *seam_scale, bool &is_work_scale_set, bool &is_seam_scale_set);
+bool get_pairwise_matches(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches);
+bool estimate_adjuster_cameras(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
+        vector<CameraParams> &cameras, vector<double> &focals, float *warped_image_scale);
+bool generate_warp_creator(Ptr<WarperCreator> &warper_creator, const string warp_type );
+bool warp_images(Ptr<WarperCreator> &warper_creator, const vector<Mat> &images, const vector<CameraParams> &cameras, const float warped_image_scale, const double seam_work_aspect,
         vector<Point> &corners, vector<UMat> &masks_warped, vector<UMat> &images_warped, vector<Size> &sizes, Ptr<RotationWarper> &warper);
 //bool find_seam(vector<UMat> &images_warped, vector<UMat> &masks_warped, vector<Point> &corners);
-bool find_seam(Ptr<ExposureCompensator> &compensator, vector<UMat> &images_warped, vector<UMat> &masks_warped, vector<Point> &corners);
+bool find_seam(Ptr<ExposureCompensator> &compensator, const vector<UMat> &images_warped, vector<UMat> &masks_warped, const vector<Point> &corners);
 int main(int argc, char *argv[])
 {
     // 1 Load images to images, and detect features to features.
@@ -120,6 +121,7 @@ int main(int argc, char *argv[])
     Ptr<RotationWarper> warper;
     bool flag4 = generate_warp_creator(warper_creator, warp_type);
     bool flag5 = warp_images(warper_creator, images, cameras, warped_image_scale, seam_work_aspect, corners, masks_warped, images_warped, sizes, warper);
+    /*
     for(size_t i = 0; i < images.size(); ++i)
     {
         imshow("src", images[i]);
@@ -127,8 +129,10 @@ int main(int argc, char *argv[])
         imshow("masks_warped", masks_warped[i]);
         waitKey();
     }
+    */
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     bool flag6 = find_seam(compensator, images_warped, masks_warped, corners);
+    /*
     for(size_t i = 0; i < images.size(); ++i)
     {
         imshow("src", images[i]);
@@ -136,20 +140,21 @@ int main(int argc, char *argv[])
         imshow("masks_warped", masks_warped[i]);
         waitKey();
     }
-
+    */
     //bool flag7 = compositing(warper_creator, warper, img_names, masks_warped, cameras, full_img_sizes, sizes, corners, is_compose_scale_set, compose_scale, work_scale, warped_image_scale);
     // 5 warp images
 
     LOGLN("Compositing...");
-    int64 t = getTickCount();
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
     Ptr<Timelapser> timelapser;
-    //double compose_seam_aspect = 1;
+    
+    // Change compose_seam_aspect and related
     double compose_work_aspect = 1;
 
+    int64 t = getTickCount();
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
         LOGLN("Compositing image #" << indices[img_idx]+1);
@@ -275,19 +280,32 @@ int main(int argc, char *argv[])
     if (!timelapse)
     {
         Mat result, result_mask;
+        cout<<"Blending..."<<endl;
+        int64 tt = getTickCount();
         blender->blend(result, result_mask);
+        LOGLN("Blending, time: " << ((getTickCount() - tt) / getTickFrequency()) << " sec");
 
         LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
         imwrite(result_name, result);
+        imwrite("result_mast.jpg", result_mask);
     }
 
     //LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 
 }
-
-bool load_find_features(vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, vector<Size> & full_img_sizes, double *work_scale, double *seam_scale, bool &is_work_scale_set, bool &is_seam_scale_set)
+/*
+ * Input    img_names: path to input image;
+ * Output   features: surf/orb features in each image(at work_scale);
+ * Output   images: resize input image to seam_scale;
+ * Output   full_img_sizes: ori input image size;
+ * Output   work_scale: <=1;
+ * Output   seam_scale: <=1; should be same with work_scale when work_megapix > 0;
+ * InOutput is_work_scale_set: input false, return true;
+ * InOutput is_seam_scale_set: input false, return true;
+ */
+bool load_find_features(const vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, vector<Size> & full_img_sizes, double *work_scale, double *seam_scale, bool &is_work_scale_set, bool &is_seam_scale_set)
 {
     LOGLN("Finding features...");
     int64 t = getTickCount();
@@ -355,43 +373,11 @@ bool load_find_features(vector<String> &img_names, vector<ImageFeatures> &featur
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
     return true;
 }
-bool load_find_features(vector<String> &img_names, vector<ImageFeatures> &features, vector<Mat> &images, vector<Size> & full_img_sizes)
-{
-    LOGLN("Finding features...");
-    int64 t = getTickCount();
-    Ptr<FeaturesFinder> finder;
-    if(features_type == "orb") finder = makePtr<OrbFeaturesFinder>();
-    else finder = makePtr<SurfFeaturesFinder>(); //"surf"
-    
-    Mat full_img, img;
-    //double seam_work_aspect = 1;
-
-    for(size_t i = 0; i < img_names.size(); ++i)
-    {
-        full_img = imread(img_names[i]);
-        if( full_img.empty() )
-        {
-            LOGLN("Can't open image "<< img_names[i]);
-            return false;
-        }
-        full_img_sizes[i] = full_img.size();
-        img = full_img;
-
-        (*finder)(img, features[i]);
-        features[i].img_idx = i;
-        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
-        //resize(full_img, img, Size(), seam_scale, seam_scale);
-        images[i] = img.clone(); /// save image after seam_scale
-    }
-    // Find feature done;
-    finder->collectGarbage();
-    full_img.release();
-    img.release();
-    
-    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-    return true;
-}
-bool get_pairwise_matches(vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+/*
+ * Input    features: found in first step;
+ * Output   pairwise_matches: matches of each two;
+ */
+bool get_pairwise_matches(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
     int64 t = getTickCount();
     //vector<MatchesInfo> pairwise_matches;
@@ -409,7 +395,14 @@ bool get_pairwise_matches(vector<ImageFeatures> &features, vector<MatchesInfo> &
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec; pairwise_matches.size() = "<<pairwise_matches.size());
     return true;
 }
-bool estimate_adjuster_cameras(vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras, vector<double> &focals, float *warped_image_scale)
+/*
+ * Input    features, orb/surf features;
+ * Input    pairwise_matches;
+ * Output   cameras: estimate and adjust the cameras info, mean warp matrix;
+ * Output   focals: focals after adjust;
+ * Output   warped_image_scale: median number of focals;
+ */
+bool estimate_adjuster_cameras(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras, vector<double> &focals, float *warped_image_scale)
 {
     // 4 Estimate Camera
     // Estimate
@@ -487,7 +480,11 @@ bool estimate_adjuster_cameras(vector<ImageFeatures> &features, vector<MatchesIn
     }
     return true;
 }
-bool generate_warp_creator(Ptr<WarperCreator> &warper_creator, string warp_type )
+/*
+ * Output    warper_creator:;
+ * Input    warp_type;
+ */
+bool generate_warp_creator(Ptr<WarperCreator> &warper_creator, const string warp_type )
 {
     // Warp images and their masks
     //Ptr<WarperCreator> warper_creator;
@@ -530,7 +527,19 @@ bool generate_warp_creator(Ptr<WarperCreator> &warper_creator, string warp_type 
     }
     return true;
 }
-bool warp_images(Ptr<WarperCreator> &warper_creator, vector<Mat> &images, vector<CameraParams> &cameras, float warped_image_scale, double seam_work_aspect,
+/*
+ * InOutput     warper_creator: create a warped_image_scale * seam_work_aspect;
+ * Input        images
+ * Input        cameras;
+ * Input        warped_image_scale, median focals;
+ * Input        seam_work_aspect = seam_scale / work_scale;
+ * Output       corners;
+ * Output       masks_warped, images size;
+ * Output       images_warped, images(seam_scale size), warped;
+ * Output       sizes, size after warped;
+ * Output       warper, the used warper;
+ */
+bool warp_images(Ptr<WarperCreator> &warper_creator, const vector<Mat> &images, const vector<CameraParams> &cameras, const float warped_image_scale, const double seam_work_aspect,
         vector<Point> &corners, vector<UMat> &masks_warped, vector<UMat> &images_warped, vector<Size> &sizes, Ptr<RotationWarper> &warper)
 {
     int num_images = static_cast<int>(images.size());
@@ -569,8 +578,12 @@ bool warp_images(Ptr<WarperCreator> &warper_creator, vector<Mat> &images, vector
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
     return true;
 }
-
-bool find_seam(Ptr<ExposureCompensator> &compensator, vector<UMat> &images_warped, vector<UMat> &masks_warped, vector<Point> &corners)
+/*
+ * Output   compensator;
+ * Input    images_warped;
+ * InOutput    masks_warped;
+ * Input    corners;*/
+bool find_seam(Ptr<ExposureCompensator> &compensator, const vector<UMat> &images_warped, vector<UMat> &masks_warped, const vector<Point> &corners)
 {
     int num_images = static_cast<int> (images_warped.size());
     vector<UMat> images_warped_f(num_images);
@@ -600,18 +613,5 @@ bool find_seam(Ptr<ExposureCompensator> &compensator, vector<UMat> &images_warpe
     }
 
     seam_finder->find(images_warped_f, corners, masks_warped);
-    /*
-    for(int i = 0; i < masks_warped.size(); ++i) {
-        imshow("masks_warped", masks_warped[i]);
-        imshow("images_warped", images_warped[i]);
-        waitKey();
-    }
-    return 0;
-    */
-    // Release unused memory
-    //images.clear();
-    //images_warped.clear();
-    //images_warped_f.clear();
-    //masks.clear();
     return true;
 }
