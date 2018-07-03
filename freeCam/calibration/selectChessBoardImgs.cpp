@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
             printf("Save the paths to %s\n", argv[3]);
             FILE *fp = fopen(argv[3],"w");
             if( fp == NULL ) {
-                printf("Open selected.txt failed.\n");
+                printf("Open %s failed.\n", argv[3]);
                 return -1;
             }
             for( size_t i = 0; i < selectedFilePath.size(); i ++ )
@@ -178,7 +178,8 @@ int main(int argc, char *argv[])
             else
             {
                 imshow("s-select,ESC-break,other-next", view);
-                waitKey(30);
+                char k = waitKey(30);
+                if(k == 27) break;
             }
         }
         /*save the select image to image path*/

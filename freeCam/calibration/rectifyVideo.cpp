@@ -10,6 +10,7 @@
 #include <string>
 #include <ctime>
 #include <cstdio>
+#include <stdio.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
@@ -23,35 +24,18 @@
 using namespace cv;
 using namespace std;
 
-Mat cameraMatrix, distCoeffs;
-int width, height;
-bool loadInfo(const string calibration_xml, Mat &cameraMatrix, Mat &distCoeffs, int *width, int *height)
-{
-    FileStorage fs( calibration_xml, FileStorage::READ );
-    if( !fs.isOpened() )
-    {
-        cout<<"Open Error\n"<<endl;
-        return false;
-    }
-    fs["camera_matrix"] >> cameraMatrix;
-    fs["distortion_coefficients"] >> distCoeffs;
-    fs["image_width"] >> (*width);
-    fs["image_height"] >> (*height);
-    fs.release();
-    if(!cameraMatrix.empty() && !distCoeffs.empty() && *height > 0 && *width > 0)
-        return true;
-    else
-        return false;
-}
+//Mat cameraMatrix, distCoeffs;
+//int width, height;
+bool loadInfo(const string calibration_xml, Mat &cameraMatrix, Mat &distCoeffs, int *width, int *height);
 void help(const char* s)
 {
     printf("Demonstrate the rectify process with cameraMatrix.\n");
     printf("Load the cameraMatrix and distCoeffs, the rectify frames.\n");
-    printf("Usage:\n\t%s out_camera_matrix.xml video.mp4\n", s);
+    printf("Usage:\n\t%s out_camera_matrix.xml video.mp4 [out_video_path]\n", s);
 }
 int main(int argc, char *argv[])
 {
-    if(argc != 3)
+    if(argc != 3 && argc != 4)
     {
         printf("ERROR, InPut ERROR.\n");
         help(argv[0]);
@@ -59,7 +43,7 @@ int main(int argc, char *argv[])
     }
     Mat cameraMatrix, distCoeffs, frame, dst, display, map1, map2;
     int width, height;
-    bool is_show = true;
+    bool is_show = argc == 3 ? true : false;
     bool loadFine = loadInfo(argv[1], cameraMatrix, distCoeffs, &width, &height);
     if(loadFine)
     {
@@ -82,13 +66,32 @@ int main(int argc, char *argv[])
         help(argv[0]);
         return -1;
     }
-
-    cap >> frame;
-    if(imageSize != frame.size())
+    int video_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    int video_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    int total_frames = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    double frame_rate = cap.get(CV_CAP_PROP_FPS);
+    
+    if(imageSize != Size(video_width, video_height))
     {
         printf("Valid Size Failed.\n");
         return -1;
     }
+    
+    VideoWriter outputVideo;
+    if( !is_show )
+    {
+        printf("Prepare for writing video...\n");
+        int ex = static_cast<int>(cap.get(CV_CAP_PROP_FOURCC));
+        char EXT[] = { (char)(ex & 0XFF), (char)((ex & 0XFF00) >> 8),(char)((ex & 0XFF0000) >> 16),(char)((ex & 0XFF000000) >> 24), 0};
+        printf("Video Codec: %c%c%c%c%c\n", EXT[0],EXT[1],EXT[2],EXT[3],EXT[4]);
+        outputVideo.open(argv[3], ex, frame_rate, Size(video_width, video_height), true);
+        if( !outputVideo.isOpened() ) {
+            cout<<"Failed to open outputVideo !\n";
+            return -1;
+        }
+        else printf("Writting to %s ...\n", argv[3]);
+    }
+    
     for(;;)
     {
         cap.grab();
@@ -109,6 +112,26 @@ int main(int argc, char *argv[])
                 if(k == 27) break;
             }
         }
+        else
+            outputVideo.write(dst);
     }
     return 0;
+}
+bool loadInfo(const string calibration_xml, Mat &cameraMatrix, Mat &distCoeffs, int *width, int *height)
+{
+    FileStorage fs( calibration_xml, FileStorage::READ );
+    if( !fs.isOpened() )
+    {
+        cout<<"Open Error\n"<<endl;
+        return false;
+    }
+    fs["camera_matrix"] >> cameraMatrix;
+    fs["distortion_coefficients"] >> distCoeffs;
+    fs["image_width"] >> (*width);
+    fs["image_height"] >> (*height);
+    fs.release();
+    if(!cameraMatrix.empty() && !distCoeffs.empty() && *height > 0 && *width > 0)
+        return true;
+    else
+        return false;
 }
