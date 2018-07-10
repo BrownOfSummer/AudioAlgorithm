@@ -94,7 +94,8 @@ static void printUsage()
 
 // Default command line args
 vector<String> img_names;
-bool preview = false;
+//bool preview = false;
+bool preview = true;
 bool try_cuda = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
@@ -880,18 +881,6 @@ int main(int argc, char *argv[])
     vector<String> img_names;
     for(int i = 1; i < argc; ++i) img_names.push_back(argv[i]);
     int num_images = static_cast<int>(img_names.size());
-    int half_images = num_images / 2;
-    if(half_images < 2) {
-        printf("Not enough to split to 2 groups.\n");
-        return -1;
-    }
-    vector<String> img_names_for_first, img_names_for_second;
-    for(int i = 0; i < half_images * 2; ++i){
-        if(i < half_images) img_names_for_first.push_back(img_names[i]);
-        else img_names_for_second.push_back(img_names[i]);
-    }
-    num_images = half_images;
-
     vector<Mat> save_masks_warped;
     vector<CameraParams> save_cameras(num_images);
     vector<Point> save_corners(num_images);
@@ -902,8 +891,7 @@ int main(int argc, char *argv[])
     int ret;
     if( is_first_step )
     {
-        //ret = prepare_paras(img_names, save_cameras, save_warper, save_masks_warped, save_corners, save_sizes, save_compensator, save_blender);
-        ret = prepare_paras(img_names_for_first, save_cameras, save_warper, save_masks_warped, save_corners, save_sizes, save_compensator, save_blender);
+        ret = prepare_paras(img_names, save_cameras, save_warper, save_masks_warped, save_corners, save_sizes, save_compensator, save_blender);
         if(ret != 0) {
             printf("First step faild !\n");
             return -1;
@@ -915,11 +903,9 @@ int main(int argc, char *argv[])
     Mat K, img, img_warped, img_warped_s, mask_warped;
     save_blender->prepare(save_corners, save_sizes);
     int64 t = getTickCount();
-    //for(size_t img_idx = 0; img_idx < img_names.size(); ++img_idx)
-    for(size_t img_idx = 0; img_idx < img_names_for_second.size(); ++img_idx)
+    for(size_t img_idx = 0; img_idx < img_names.size(); ++img_idx)
     {
-        //img = imread(img_names[img_idx], 1);
-        img = imread(img_names_for_second[img_idx], 1);
+        img = imread(img_names[img_idx], 1);
         save_cameras[img_idx].K().convertTo(K, CV_32F);
         // Warp the current image
         save_warper->warp(img, K, save_cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
@@ -936,8 +922,8 @@ int main(int argc, char *argv[])
     save_blender->blend(result, result_mask);
     result.convertTo(result, CV_8U);
     imwrite("result2.jpg", result);
+    printf("Second step cost %lfs.\n", (double)(getTickCount() - t) / getTickFrequency());
     bool flag = cropWithMat(result, cropped);
     if(flag) imwrite("cropped.jpg", cropped);
-    printf("Second step cost %lfs.\n", (double)(getTickCount() - t) / getTickFrequency());
     return 0;
 }
