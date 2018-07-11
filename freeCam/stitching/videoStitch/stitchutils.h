@@ -16,3 +16,4 @@ bool checkBlackRow(const cv::Mat& roi, int y, const cv::Rect &rect);
 bool cropimg2rect(const cv::Mat &src, cv::Rect &rect);
 vector<string> listDir( const char* path, const char *ext );
 void vlog(const char *format,...);
+void check_dir(const char *dirpath);

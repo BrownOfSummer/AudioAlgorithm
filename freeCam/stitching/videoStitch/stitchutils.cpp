@@ -12,6 +12,9 @@
 #include<stdio.h>
 #include<stdarg.h>
 #include<dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include<opencv2/opencv.hpp>
 #include "stitchutils.h"
 using namespace std;
@@ -174,4 +177,15 @@ vector<string> listDir( const char* path, const char *ext )
       closedir( dirFile );
    }
     return ret;
+}
+
+void check_dir(const char *dirpath)
+{
+    struct stat st = {0};
+
+    if (stat(dirpath, &st) == -1)
+    {
+        printf("mkdir %s\n", dirpath);
+        mkdir(dirpath, 0777);
+    }
 }

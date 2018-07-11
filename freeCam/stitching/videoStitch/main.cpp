@@ -35,21 +35,23 @@ void help()
 {
     printf("Demonstrate the process of stitching several images in different dirs.\n");
     printf("Input dirs with images, get one from each then stitch them.\n");
-    printf("Usage:\n\t./stitchPlane /path/to/dir0/ /path/to/dir1/ ....\n");
+    printf("Usage:\n\t./stitchPlane /path/to/dir0/ /path/to/dir1/ .... -o /path/to/out/ \n");
 }
 int main(int argc, char *argv[])
 {
-    if( argc < 3 )
+    if( argc < 5 || string(argv[argc - 2]) != "-o")
     {
-        printf("No enough input !\n");
+        printf("Input ERROR!\n");
         help();
         return -1;
     }
-
+    
+    printf("Result will be saved to %s\n", argv[argc - 1]);
+    check_dir(argv[argc - 1]);
     // List and load all images path
     vector<vector<string> >ImageNames;
     vector<string> Dirs;
-    for(int i = 1; i < argc; ++i)
+    for(int i = 1; i < argc - 2; ++i)
     {
         vector<string> img_names = listDir( argv[i], ".jpg" );
         if(img_names.empty())
@@ -139,9 +141,15 @@ int main(int argc, char *argv[])
             printf("Warning, cropped faild !\n");
             cropped = result;
         }
+        /*
         imshow("panorama", cropped);
         char k = waitKey(30);
         if(k == 27) break;
+        */
+        char out_path[200];
+        sprintf(out_path,"%s%05d.jpg", argv[argc - 1], n);
+        imwrite(out_path, cropped);
+        printf("save to %s\n", out_path);
     }
     return 0;
 }
