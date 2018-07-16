@@ -31,23 +31,21 @@ int main(int argc, char *argv[])
     cout<<"Get warpMatrix ORB...\n";
     getWarpMatrixORB(imgP, referenceP, warpMatrix1, warp_mode);
     cout<<warpMatrix1<<endl;
+    if(warpMatrix1.empty())
+        cout<<"Can not get warp matrix ORB!\n";
+    else
+        warpImage(im, imRegistered1, reference.size(), warpMatrix1, warp_mode);
+
     
+#if CV_MAJOR_VERSION > 2
     cout<<"Get warpMatrix ECC...\n";
     getWarpMatrixECC(im, reference, warpMatrix2, warp_mode);
     cout<<warpMatrix2<<endl;
-    
-    if(warpMatrix1.empty()) {
-        cout<<"Can not get warp matrix ORB !\n";
-    }
-    else {
-        warpImage(im, imRegistered1, reference.size(), warpMatrix1, warp_mode);
-    }
-    if(warpMatrix2.empty()) {
-        cout<<"Can not get warp matrix ECC !\n";
-    }
-    else {
-        warpImage(im, imRegistered2, reference.size(), warpMatrix2, warp_mode);
-    }
+    if(warpMatrix2.empty())
+        cout<<"Can not get warp matrix ECC!\n";
+    else
+        warpImageECC(im, imRegistered2, reference.size(), warpMatrix2, warp_mode);
+#endif
     if( !imRegistered1.empty() ) imwrite("00aligned_ORB.jpg", imRegistered1);
     if( !imRegistered2.empty() ) imwrite("01aligned_ECC.jpg", imRegistered2);
     return 0;

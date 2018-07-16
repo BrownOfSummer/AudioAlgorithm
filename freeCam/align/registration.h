@@ -16,9 +16,13 @@ using namespace cv;
  * MOTION_HOMOGRAPHY 
  */
 
+Mat getGradient(Mat src);
+// Match points based
 void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vector<Point2f> &referenceP);
 void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP, Mat &warpMatrix, const int method);
 void warpImage(Mat img, Mat &imgWrap, Size outSize, Mat warpMatrix, const int method);
-Mat getGradient(Mat src);
+#if CV_MAJOR_VERSION > 2
+// ECC based
 void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mode);
-void alignImages(Mat &im1, Mat &im2, Mat &h, const int mode);
+void warpImageECC(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int method);
+#endif

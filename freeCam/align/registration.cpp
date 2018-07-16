@@ -115,13 +115,41 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
     else 
     {
         // from destination to reference: M * imgP -> referenceP;
-        //warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
-        warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
+        warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
+        //warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
         //warpMatrix = estimateRigidTransform( imgP, referenceP, false);
     }
     return;
 }
 
+/*
+ *  Warp the image with the warpMatrix.
+ *  Paras: 
+ *      img: input, image to be warp;
+ *      outSize:    input, the image size after warp;
+ *      imgWarp:    output, the image be warped;
+ *      warpMatrix: input, the warpMatrix of size[2 x 3] or [3 x 3]
+ *      method:     input:  the warp method
+ *                          MOTION_AFFINE
+ *                          MOTION_EUCLIDEAN
+ *                          MOTION_TRANSLATION
+ *                          MOTION_HOMOGRAPHY 
+ */
+void warpImage(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int method)
+{
+    // Use homography to warp image.
+    if( method == MOTION_HOMOGRAPHY )
+    {
+        warpPerspective(img, imgWarp, warpMatrix, outSize);
+        //warpPerspective(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+    }
+    else
+    {
+        warpAffine(img, imgWarp, warpMatrix, outSize);
+        //warpAffine(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+    }
+    return;
+}
 /*
  * Calc the gradients of a image using sobel method.
  * Paras:
@@ -155,6 +183,8 @@ Mat getGradient(Mat src)
 	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
 	return grad; 
 }
+
+#if CV_MAJOR_VERSION > 2
 
 /* Calc the warp_matrix to align img to reference.
  * Paras:
@@ -197,31 +227,20 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
     return;
 }
 
-/*
- *  Warp the image with the warpMatrix.
- *  Paras: 
- *      img: input, image to be warp;
- *      outSize:    input, the image size after warp;
- *      imgWarp:    output, the image be warped;
- *      warpMatrix: input, the warpMatrix of size[2 x 3] or [3 x 3]
- *      method:     input:  the warp method
- *                          MOTION_AFFINE
- *                          MOTION_EUCLIDEAN
- *                          MOTION_TRANSLATION
- *                          MOTION_HOMOGRAPHY 
- */
-void warpImage(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int method)
+
+void warpImageECC(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int method)
 {
     // Use homography to warp image.
     if( method == MOTION_HOMOGRAPHY )
     {
-        warpPerspective(img, imgWarp, warpMatrix, outSize);
-        //warpPerspective(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+        //warpPerspective(img, imgWarp, warpMatrix, outSize);
+        warpPerspective(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
     }
     else
     {
-        warpAffine(img, imgWarp, warpMatrix, outSize);
-        //warpAffine(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
+        //warpAffine(img, imgWarp, warpMatrix, outSize);
+        warpAffine(img, imgWarp, warpMatrix, outSize, INTER_LINEAR + WARP_INVERSE_MAP);
     }
     return;
 }
+#endif

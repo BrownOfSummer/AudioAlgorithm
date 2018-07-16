@@ -61,22 +61,24 @@ int main(int argc, char *argv[])
     warpImage( src, src_warped, src.size(), warp_matrix, warpType );
     Mat reference = src;
 
+    imshow("reference", reference);
+    imshow("src_warped", src_warped);
     Mat warp1, warp2;
+    Mat warpImg1, warpImg2;
+    
     vector<Point2f> imgP, referenceP;
     getMatchPoints(src_warped, reference, imgP, referenceP);
     getWarpMatrixORB(imgP, referenceP, warp1, warpType);
     cout<<"ORB:\n"<<warp1<<endl;
-    
+    warpImage(src_warped, warpImg1, reference.size(), warp1, warpType);
+    imshow("ORB-warp", warpImg1);
+
+#if CV_MAJOR_VERSION > 2
     getWarpMatrixECC(src_warped, reference, warp2, warpType);
     cout<<"ECC:\n"<<warp2<<endl;
-    imshow("reference", reference);
-    imshow("src_warped", src_warped);
-
-    Mat warpImg1, warpImg2;
-    warpImage(src_warped, warpImg1, reference.size(), warp1, warpType);
-    warpImage(src_warped, warpImg2, reference.size(), warp2, warpType);
-    imshow("ORB-warp", warpImg1);
+    warpImageECC(src_warped, warpImg2, reference.size(), warp2, warpType);
     imshow("ECC-warp", warpImg2);
+#endif
     waitKey();
     return 0;
 }
