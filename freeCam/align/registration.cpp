@@ -134,6 +134,8 @@ Mat getGradient(Mat src)
     if(src.channels() != 1) cvtColor(src, src_gray, CV_BGR2GRAY);
     else src.copyTo(src_gray);
 
+    // Remove noise by blurring with a Gaussian filter ( kernel size = 3 )
+    GaussianBlur(src_gray, src_gray, Size(3, 3), 0, 0, BORDER_DEFAULT);
 	Mat grad_x, grad_y, grad;
 	Mat abs_grad_x, abs_grad_y;
 

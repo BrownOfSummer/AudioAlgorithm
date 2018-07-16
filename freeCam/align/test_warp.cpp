@@ -26,9 +26,10 @@ void generateWarpMatrix( Mat &warp_matrix, const int warpType )
         case MOTION_EUCLIDEAN:
             angle = CV_PI / 30 + CV_PI*rng.uniform((double)-2.f, (double)2.f)/180;
             cout<<"angel = "<<angle<<endl;
+            //Mat rot_mat = getRotationMatrix2D(center, angle * 180 / CV_PI, scale=1 );
             warp_matrix = ( Mat_<float>(2,3) << 
-                    cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
-                    sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
+                    cos(angle), sin(angle), (rng.uniform(10.f, 20.f)),
+                    -sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
             break;
         case MOTION_AFFINE:
             warp_matrix = (Mat_<float>(2,3) << (1-rng.uniform(-0.05f, 0.05f)),
@@ -51,15 +52,16 @@ void generateWarpMatrix( Mat &warp_matrix, const int warpType )
 int main(int argc, char *argv[])
 {
     Mat warp_matrix, src, src_warped;
+    //const int warpType = MOTION_EUCLIDEAN;
     const int warpType = MOTION_TRANSLATION;
     generateWarpMatrix(warp_matrix, warpType);
-    cout<<warp_matrix<<endl;
+    cout<<"WARP:\n"<<warp_matrix<<endl;
 
     src = imread( argv[1], 1 );
     warpImage( src, src_warped, src.size(), warp_matrix, warpType );
     Mat reference = src;
 
-    Mat warp1, warp2, warp3;
+    Mat warp1, warp2;
     vector<Point2f> imgP, referenceP;
     getMatchPoints(src_warped, reference, imgP, referenceP);
     getWarpMatrixORB(imgP, referenceP, warp1, warpType);
@@ -70,16 +72,11 @@ int main(int argc, char *argv[])
     imshow("reference", reference);
     imshow("src_warped", src_warped);
 
-    alignImages(src_warped, reference, warp3, warpType);
-    cout<<"OOO:\n"<<warp3<<endl;
-    
-    Mat warpImg1, warpImg2, warpImg3;
+    Mat warpImg1, warpImg2;
     warpImage(src_warped, warpImg1, reference.size(), warp1, warpType);
     warpImage(src_warped, warpImg2, reference.size(), warp2, warpType);
-    warpImage(src_warped, warpImg3, reference.size(), warp3, warpType);
     imshow("ORB-warp", warpImg1);
     imshow("ECC-warp", warpImg2);
-    imshow("OOO-warp", warpImg3);
     waitKey();
     return 0;
 }
