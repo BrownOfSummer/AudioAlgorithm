@@ -18,6 +18,7 @@ using namespace cv;
 
 Mat getGradient(Mat src);
 Mat DrawInlier(Mat &src1, Mat &src2, std::vector<KeyPoint> &kpt1, std::vector<KeyPoint> &kpt2, std::vector<DMatch> &inlier, int type);
+Mat drawPointPairs(const Mat &img1, const Mat&img2, const std::vector<Point2f> &p1, const std::vector<Point2f> &p2, const int type);
 // Match points based
 void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vector<Point2f> &referenceP);
 void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP, Mat &warpMatrix, const int method);

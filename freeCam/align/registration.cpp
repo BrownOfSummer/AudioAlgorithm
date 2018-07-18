@@ -13,10 +13,11 @@
 #include<opencv2/xfeatures2d.hpp>
 #include<opencv2/features2d.hpp>
 #include "registration.h"
+#include "ransac_match.h"
 
 using namespace cv;
 using namespace cv::xfeatures2d;
-const int MAX_FEATURES = 500;
+const int MAX_FEATURES = 1500;
 const float GOOD_MATCH_PERCENT = 0.15f;
 
 #ifndef DEBUG
@@ -83,15 +84,31 @@ void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vec
     Mat imgMatches;
     //drawMatches(img, keypoints1, reference, keypoints2, matches, imgMatches);
     imgMatches = DrawInlier(img, reference, keypoints1, keypoints2, matches, 2);
-    imwrite("matches.jpg", imgMatches);
+    imwrite("matches-before-ransac.jpg", imgMatches);
 #endif
     // Extract location of good matches.
     // std::vector<Point2f> points1, points2;
+    vector<point_pair> match_pairs;
+    vector<int> inlierIdx;
     for(size_t i = 0; i < matches.size(); i ++)
     {
-        imgP.push_back( keypoints1[ matches[i].queryIdx ].pt );
-        referenceP.push_back( keypoints2[ matches[i].trainIdx ].pt );
+        //imgP.push_back( keypoints1[ matches[i].queryIdx ].pt );
+        //referenceP.push_back( keypoints2[ matches[i].trainIdx ].pt );
+        point_pair pair = point_pair( keypoints1[ matches[i].queryIdx ].pt, keypoints2[ matches[i].trainIdx ].pt);
+        match_pairs.push_back(pair);
     }
+    ransacit(match_pairs, inlierIdx);
+    vlog("Inliers after RANSAC: %d\n", inlierIdx.size());
+    for(size_t i = 0; i < inlierIdx.size(); ++i)
+    {
+        imgP.push_back( match_pairs[i].a );
+        referenceP.push_back( match_pairs[i].b );
+    }
+#if DEBUG
+    Mat ret = drawPointPairs(img, reference, imgP, referenceP, 2);
+    imwrite("matches-after-ransac.jpg", ret);
+#endif
+
     return;
 }
 /*
@@ -295,4 +312,38 @@ Mat DrawInlier(Mat &src1, Mat &src2, std::vector<KeyPoint> &kpt1, std::vector<Ke
 	}
 
 	return output;
+}
+
+Mat drawPointPairs(const Mat &img1, const Mat&img2, const vector<Point2f> &p1, const vector<Point2f> &p2, const int type)
+{
+    const int height = std::max(img1.rows, img2.rows);
+    const int width = img1.cols + img2.cols;
+    Mat output(height, width, CV_8UC3, Scalar(0,0,0));
+    img1.copyTo(output(Rect(0, 0, img1.cols, img1.rows)));
+    img2.copyTo(output(Rect(img1.cols, 0, img2.cols, img2.rows)));
+    RNG rng(12345);
+    if(type == 1)
+    {
+        for(size_t i = 0; i < p1.size(); ++i)
+        {
+            Point2f left = p1[i];
+            Point2f right = p2[i] + Point2f( (float)(img1.cols), 0.0 );
+            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+            line(output, left, right, color);
+        }
+    }
+    else
+    {
+        for(size_t i = 0; i < p1.size(); ++i)
+        {
+            Point2f left = p1[i];
+            Point2f right = p2[i] + Point2f( (float)(img1.cols), 0.0 );
+
+            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+            line(output, left, right, color);
+            circle(output, left, 1, color, 2);
+            circle(output, right, 1, color, 2);
+        }
+    }
+    return output;
 }

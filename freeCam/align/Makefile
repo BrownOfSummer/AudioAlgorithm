@@ -2,7 +2,7 @@
 CFLAGS=-Wall -g -O3
 INCLUDE=$(shell pkg-config --cflags opencv)
 LIBS=$(shell pkg-config --libs opencv)
-OBJS=registration.o
+OBJS=registration.o ransac_match.o
 CXX=g++
 CC=gcc
 all:
