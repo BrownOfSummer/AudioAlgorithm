@@ -12,7 +12,7 @@
 #include "registration.h"
 using namespace std;
 using namespace cv;
-
+#define WORK_H 180
 int main(int argc, char *argv[])
 {
     Mat reference = imread( argv[1] );
@@ -20,13 +20,17 @@ int main(int argc, char *argv[])
     Mat im = imread( argv[2] );
     cout<<"Read "<<argv[2]<<" to align. \n";
 
+    double ratio = 1.0;
+    ratio = (double)(WORK_H) / reference.rows;
+    resize(reference, reference, Size(), ratio, ratio);
+    resize(im, im, Size(), ratio, ratio);
     cout<<"Get match points ...\n";
     vector<Point2f> imgP, referenceP;
     getMatchPoints(im, reference, imgP, referenceP);
     
     Mat imRegistered1, imRegistered2;
     Mat warpMatrix1, warpMatrix2;
-    const int warp_mode = MOTION_EUCLIDEAN;
+    const int warp_mode = MOTION_TRANSLATION;
 
     cout<<"Get warpMatrix ORB...\n";
     getWarpMatrixORB(imgP, referenceP, warpMatrix1, warp_mode);

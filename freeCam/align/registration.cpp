@@ -81,7 +81,8 @@ void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vec
     // Draw imgMatches.
 #if DEBUG
     Mat imgMatches;
-    drawMatches(img, keypoints1, reference, keypoints2, matches, imgMatches);
+    //drawMatches(img, keypoints1, reference, keypoints2, matches, imgMatches);
+    imgMatches = DrawInlier(img, reference, keypoints1, keypoints2, matches, 2);
     imwrite("matches.jpg", imgMatches);
 #endif
     // Extract location of good matches.
@@ -115,8 +116,8 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
     else 
     {
         // from destination to reference: M * imgP -> referenceP;
-        warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
-        //warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
+        //warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
+        warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
         //warpMatrix = estimateRigidTransform( imgP, referenceP, false);
     }
     return;
@@ -202,13 +203,18 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
 {
     // Set a 2x3 or 3x3 warp matrix depending on the motion model.
     // Initialize the matrix to identity
+    Mat img_gray, reference_gray;
+    if(img.channels() > 1) cvtColor(img, img_gray, CV_BGR2GRAY);
+    else img.copyTo(img_gray);
+    if(reference.channels() > 1) cvtColor(reference, reference_gray, CV_BGR2GRAY);
+    else reference.copyTo(reference_gray);
     if ( warp_mode == MOTION_HOMOGRAPHY )
         warpMatrix = Mat::eye(3, 3, CV_32F);
     else
         warpMatrix = Mat::eye(2, 3, CV_32F);
 
     // Specify the number of iterations.
-    int number_of_iterations = 50;
+    int number_of_iterations = 100;
     
     // Specify the threshold of the increment in the correlation coefficient between two iterations
     double termination_eps = 1e-8;
@@ -218,8 +224,10 @@ void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mo
 
     // Run the ECC algorithm. The results are stored in warp_matrix.
     findTransformECC(
-                     getGradient(reference),
-                     getGradient(img),
+                     //getGradient(reference),
+                     reference_gray,
+                     //getGradient(img),
+                     img_gray,
                      warpMatrix,
                      warp_mode,
                      criteria
@@ -244,3 +252,47 @@ void warpImageECC(Mat img, Mat &imgWarp, Size outSize, Mat warpMatrix, const int
     return;
 }
 #endif
+
+Mat DrawInlier(Mat &src1, Mat &src2, std::vector<KeyPoint> &kpt1, std::vector<KeyPoint> &kpt2, std::vector<DMatch> &inlier, int type)
+{
+	const int height = max(src1.rows, src2.rows);
+	const int width = src1.cols + src2.cols;
+	Mat output(height, width, CV_8UC3, Scalar(0, 0, 0));
+	src1.copyTo(output(Rect(0, 0, src1.cols, src1.rows)));
+	src2.copyTo(output(Rect(src1.cols, 0, src2.cols, src2.rows)));
+
+    RNG rng(12345);
+	if (type == 1)
+	{
+		for (size_t i = 0; i < inlier.size(); i++)
+		{
+			Point2f left = kpt1[inlier[i].queryIdx].pt;
+			Point2f right = (kpt2[inlier[i].trainIdx].pt + Point2f((float)src1.cols, 0.f));
+            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+			line(output, left, right, color);
+		}
+	}
+	else if (type == 2)
+	{
+		for (size_t i = 0; i < inlier.size(); i++)
+		{
+			Point2f left = kpt1[inlier[i].queryIdx].pt;
+			Point2f right = (kpt2[inlier[i].trainIdx].pt + Point2f((float)src1.cols, 0.f));
+            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+			line(output, left, right, color);
+			circle(output, left, 1, color, 2);
+			circle(output, right, 1, color, 2);
+		}
+        /*
+		for (size_t i = 0; i < inlier.size(); i++)
+		{
+			Point2f left = kpt1[inlier[i].queryIdx].pt;
+			Point2f right = (kpt2[inlier[i].trainIdx].pt + Point2f((float)src1.cols, 0.f));
+			circle(output, left, 1, Scalar(0, 255, 255), 2);
+			circle(output, right, 1, Scalar(0, 255, 0), 2);
+		}
+        */
+	}
+
+	return output;
+}

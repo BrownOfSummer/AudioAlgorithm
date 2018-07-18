@@ -52,8 +52,8 @@ void generateWarpMatrix( Mat &warp_matrix, const int warpType )
 int main(int argc, char *argv[])
 {
     Mat warp_matrix, src, src_warped;
-    //const int warpType = MOTION_EUCLIDEAN;
-    const int warpType = MOTION_TRANSLATION;
+    const int warpType = MOTION_EUCLIDEAN;
+    //const int warpType = MOTION_TRANSLATION;
     generateWarpMatrix(warp_matrix, warpType);
     cout<<"WARP:\n"<<warp_matrix<<endl;
 
