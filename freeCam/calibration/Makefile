@@ -10,6 +10,7 @@ all:
 	make loadAndUndistortion
 	make rectifyVideo
 	make selectChessBoardImgs
+	make rectifyToFrames
 rectifyVideo: rectifyVideo.o $(OBJS)
 	$(CXX) $(CFLAGS) -o rectifyVideo rectifyVideo.o $(OBJS) $(LIBS)
 camera_calibration: camera_calibration.o $(OBJS)
@@ -18,6 +19,8 @@ loadAndUndistortion: loadAndUndistortion.o
 	$(CXX) $(CFLAGS) -o loadAndUndistortion loadAndUndistortion.o $(LIBS)
 selectChessBoardImgs: selectChessBoardImgs.o
 	$(CXX) $(CFLAGS) -o selectChessBoardImgs selectChessBoardImgs.o $(LIBS)
+rectifyToFrames: rectifyToFrames.o
+	$(CXX) $(CFLAGS) -o rectifyToFrames rectifyToFrames.o $(LIBS)
 .cpp.o:
 	$(CXX) $(INCLUDE) -c $< -o $@
 .c.o:
@@ -29,3 +32,4 @@ distclean:
 	-rm rectifyVideo
 	-rm camera_calibration
 	-rm selectChessBoardImgs
+	-rm rectifyToFrames

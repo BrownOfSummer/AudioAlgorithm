@@ -28,15 +28,17 @@ using namespace std;
 //Mat cameraMatrix, distCoeffs;
 //int width, height;
 bool loadInfo(const string calibration_xml, Mat &cameraMatrix, Mat &distCoeffs, int *width, int *height);
+bool str2secs(string time_str, double *secs);
 void help(const char* s)
 {
     printf("Demonstrate the rectify process with cameraMatrix.\n");
     printf("Load the cameraMatrix and distCoeffs, the rectify frames.\n");
-    printf("Usage:\n\t%s out_camera_matrix.xml video.mp4 [out_frames_dir/]\n", s);
+    printf("Usage:\n\t%s out_camera_matrix.xml video.mp4 [out_frames_dir/] [used_for_prepare]\n", s);
+    printf("\t%s out_camera_matrix.xml video.mp4 [out_frames_dir/] [-ss hh:mm:ss -t hh:mm:ss]\n", s);
 }
 int main(int argc, char *argv[])
 {
-    if(argc != 3 && argc != 4)
+    if(argc != 3 && argc != 4 && argc != 5 && argc != 8)
     {
         printf("ERROR, InPut ERROR.\n");
         help(argv[0]);
@@ -45,6 +47,17 @@ int main(int argc, char *argv[])
     Mat cameraMatrix, distCoeffs, frame, dst, display, map1, map2;
     int width, height;
     bool is_show = argc == 3 ? true : false;
+    bool used_for_prepare = argc == 5 ? true : false;
+    bool need_offset = argc == 8 ? true : false;
+    double ss = 0, dur = 0;
+    if( need_offset )
+    {
+        if( !str2secs(string(argv[5]), &ss) & !str2secs(string(argv[7]), &dur) )
+        {
+            printf("Decode time string error !");
+            return -1;
+        }
+    }
     bool loadFine = loadInfo(argv[1], cameraMatrix, distCoeffs, &width, &height);
     if(loadFine)
     {
@@ -72,7 +85,27 @@ int main(int argc, char *argv[])
     int video_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
     int total_frames = cap.get(CV_CAP_PROP_FRAME_COUNT);
     double frame_rate = cap.get(CV_CAP_PROP_FPS);
-    printf("Total %d frames, frame_rate: %lf\n",total_frames, frame_rate);
+    
+    int skip_start_frames = ss * frame_rate;
+    int tdur_frames = dur * frame_rate;
+    if(need_offset)
+    {
+        if( skip_start_frames >= total_frames)
+        {
+            printf("-ss is too large !\n");
+            return -1;
+        }
+        if( tdur_frames < 1 )
+        {
+            printf("-t is too short !\n");
+            return -1;
+        }
+        //tdur_frames = tdur_frames < (video_len - ss) * frame_rate ? tdur_frames : (video_len - ss) * frame_rate;
+        tdur_frames = tdur_frames < (total_frames - skip_start_frames) ? tdur_frames : (total_frames - skip_start_frames);
+        printf("Skip %d frames from start, retrive %d frames\n", skip_start_frames, tdur_frames);
+        cap.set(CV_CAP_PROP_POS_FRAMES, skip_start_frames);
+        //cap.set(CV_CAP_PROP_POS_MSEC, ss);
+    }
     
     if(imageSize != Size(video_width, video_height))
     {
@@ -81,6 +114,7 @@ int main(int argc, char *argv[])
     }
     char save_path[200];
     int fcnt = 0;
+    printf("Start Rectify...\n");
     for(;;)
     {
         cap.grab();
@@ -103,10 +137,15 @@ int main(int argc, char *argv[])
         }
         else
         {
-            if(fcnt > 8000) break;
+            //if(fcnt > 8000) break;
+            if(need_offset && fcnt >= tdur_frames) break;
             sprintf(save_path,"%s%05d.jpg", argv[3],fcnt++);
             printf("Save to %s\n", save_path);
             imwrite(save_path, dst);
+            
+            if (used_for_prepare) {
+                break;
+            }
         }
     }
     return 0;
@@ -128,4 +167,26 @@ bool loadInfo(const string calibration_xml, Mat &cameraMatrix, Mat &distCoeffs, 
         return true;
     else
         return false;
+}
+bool str2secs(string time_str, double *secs)
+{
+    int h = 0, m = 0;
+    double s = 0;
+    *secs = 0;
+    int ret = sscanf(time_str.c_str(), "%d:%d:%lf", &h, &m, &s);
+    if(ret == 3)
+    {
+        if(h < 0 || m >= 60 || m < 0 || s >= 60 || s < 0)
+        {
+            printf("Time string invalid !\n");
+            return false;
+        }
+        *secs = h * 3600 + m * 60 + s;
+    }
+    else
+    {
+        printf("Time string invalide.\n");
+        return false;
+    }
+    return true;
 }
