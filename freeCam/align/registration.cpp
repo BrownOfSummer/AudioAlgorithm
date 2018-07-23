@@ -134,8 +134,8 @@ void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP
     {
         // from destination to reference: M * imgP -> referenceP;
         //warpMatrix = estimateAffine2D( imgP, referenceP, noArray(), RANSAC );
-        warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
-        //warpMatrix = estimateRigidTransform( imgP, referenceP, false);
+        //warpMatrix = estimateAffinePartial2D( imgP, referenceP, noArray(), RANSAC );
+        warpMatrix = estimateRigidTransform( imgP, referenceP, false);
     }
     return;
 }
@@ -346,4 +346,192 @@ Mat drawPointPairs(const Mat &img1, const Mat&img2, const vector<Point2f> &p1, c
         }
     }
     return output;
+}
+/* calc translation based phase. */
+Point2d phaseMove(const Mat &img, const Mat &reference)
+{
+    Mat prev, curr, curr64f, prev64f, hann;
+    if( img.channels() > 1 ) cvtColor(img, curr, CV_BGR2GRAY);
+    else curr = img.clone();
+    if( reference.channels() > 1 ) cvtColor(reference, prev, CV_BGR2GRAY);
+    else prev = reference.clone();
+
+    prev.convertTo(prev64f, CV_64F);
+    curr.convertTo(curr64f, CV_64F);
+
+    createHanningWindow(hann, curr.size(), CV_64F);
+    Point2d shift = phaseCorrelate(prev64f, curr64f, hann);
+    
+    //cout<<"shift.x = "<<shift.x<<"; shift.y = "<<shift.y<<endl;
+    return shift;
+}
+
+/* Estimate warp based on solve.
+ * Warp Point2f shape1 to shape2.
+ * 6 paras for affine:
+ * P1[0].x, P1[0].y, 1, 0,       0,       0  --> P2[0].x
+ * 0,       0,       0, P1[0].x, P1[0].y, 1  --> P2[0].y
+ * P1[1].x, P1[1].y, 1, 0,       0,       0  --> P2[1].x
+ * 0        0        0, P1[1].x, P1[1].y, 1  --> P2[1].y
+ * ....
+ *
+ * 4 paras for affine:[(0,0)==(1,1); (0,1) = -(1,0)]
+ *  P1[0].x, P1[0].y, 1, 0   --> P2[0].x
+ * -P1[0].y, P1[0].x, 0, 1   --> P2[0].y
+ *  P1[1].x, P1[1].y, 1, 0   --> P2[1].x
+ * -P1[1].y, P1[1].x, 0, 1   --> P2[1].y
+ *
+ * 4 paras for translation:
+ * P1[0].x,     0,      1,  0 --> P2[0].x
+ * 0,       P1[0].y,    0,  1 --> P2[0].y
+ * P1[1].x,     0,      1,  0 --> P2[1].x
+ * 0        P1[1].y,    0,  1 --> P2[1].y
+ */
+Mat localWarpEstimate(const std::vector<Point2f>& shape1, const std::vector<Point2f>& shape2, int type=1)
+{
+    Mat out(2,3,CV_32F);
+    int siz=2*(int)shape1.size();
+    
+    /*6 paras affine*/
+    if (type == 1)
+    {
+        Mat matM(siz, 6, CV_32F);
+        Mat matP(siz,1,CV_32F);
+        int contPt=0;
+        for (int ii=0; ii<siz; ii++)
+        {
+            Mat therow = Mat::zeros(1,6,CV_32F);
+            if (ii%2==0)
+            {
+                therow.at<float>(0,0)=shape1[contPt].x;
+                therow.at<float>(0,1)=shape1[contPt].y;
+                therow.at<float>(0,2)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].x;
+            }
+            else
+            {
+                therow.at<float>(0,3)=shape1[contPt].x;
+                therow.at<float>(0,4)=shape1[contPt].y;
+                therow.at<float>(0,5)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].y;
+                contPt++;
+            }
+        }
+        Mat sol;
+        solve(matM, matP, sol, DECOMP_SVD);
+        out = sol.reshape(0,2);
+    }
+    /* 4 paras affine*/
+    else if(type == 2)
+    {
+        Mat matM(siz, 4, CV_32F);
+        Mat matP(siz,1,CV_32F);
+        int contPt=0;
+        for (int ii=0; ii<siz; ii++)
+        {
+            Mat therow = Mat::zeros(1,4,CV_32F);
+            if (ii%2==0)
+            {
+                therow.at<float>(0,0)=shape1[contPt].x;
+                therow.at<float>(0,1)=shape1[contPt].y;
+                therow.at<float>(0,2)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].x;
+            }
+            else
+            {
+                therow.at<float>(0,0)=-shape1[contPt].y;
+                therow.at<float>(0,1)=shape1[contPt].x;
+                therow.at<float>(0,3)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].y;
+                contPt++;
+            }
+        }
+        Mat sol;
+        solve(matM, matP, sol, DECOMP_SVD);
+        out.at<float>(0,0)=sol.at<float>(0,0);
+        out.at<float>(0,1)=sol.at<float>(1,0);
+        out.at<float>(0,2)=sol.at<float>(2,0);
+        out.at<float>(1,0)=-sol.at<float>(1,0);
+        out.at<float>(1,1)=sol.at<float>(0,0);
+        out.at<float>(1,2)=sol.at<float>(3,0);
+    }
+    /* 4 paras for simple translation */
+    else if(type == 3)
+    {
+        Mat matM(siz, 4, CV_32F);
+        Mat matP(siz,1,CV_32F);
+        int contPt=0;
+        for (int ii=0; ii<siz; ii++)
+        {
+            Mat therow = Mat::zeros(1,4,CV_32F);
+            if (ii%2==0)
+            {
+                therow.at<float>(0,0)=shape1[contPt].x;
+                therow.at<float>(0,1)=0;
+                therow.at<float>(0,2)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].x;
+            }
+            else
+            {
+                therow.at<float>(0,0)=0;
+                therow.at<float>(0,1)=shape1[contPt].y;
+                therow.at<float>(0,3)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].y;
+                contPt++;
+            }
+        }
+        Mat sol;
+        solve(matM, matP, sol, DECOMP_SVD);
+        //cout<<sol<<endl;
+        out.at<float>(0,0)=sol.at<float>(0,0);
+        out.at<float>(0,1)=0;
+        out.at<float>(0,2)=sol.at<float>(0,2);
+        out.at<float>(1,0)=0;
+        out.at<float>(1,1)=sol.at<float>(0,1);
+        out.at<float>(1,2)=sol.at<float>(0,3);
+    }
+    /* 3 paras for translation*/
+    else
+    {
+        Mat matM(siz, 3, CV_32F);
+        Mat matP(siz,1,CV_32F);
+        int contPt=0;
+        for (int ii=0; ii<siz; ii++)
+        {
+            Mat therow = Mat::zeros(1,3,CV_32F);
+            if (ii%2==0)
+            {
+                therow.at<float>(0,0)=shape1[contPt].x;
+                therow.at<float>(0,1)=1;
+                therow.at<float>(0,2)=0;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].x;
+            }
+            else
+            {
+                therow.at<float>(0,0)=shape1[contPt].y;
+                therow.at<float>(0,1)=0;
+                therow.at<float>(0,2)=1;
+                therow.row(0).copyTo(matM.row(ii));
+                matP.at<float>(ii,0) = shape2[contPt].y;
+                contPt++;
+            }
+        }
+        Mat sol;
+        solve(matM, matP, sol, DECOMP_SVD);
+        //cout<<sol<<endl;
+        out.at<float>(0,0)=sol.at<float>(0,0);
+        out.at<float>(0,1)=0;
+        out.at<float>(0,2)=sol.at<float>(0,1);
+        out.at<float>(1,0)=0;
+        out.at<float>(1,1)=sol.at<float>(0,0);
+        out.at<float>(1,2)=sol.at<float>(0,2);
+    }
+    return out;
 }
