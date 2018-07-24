@@ -28,6 +28,8 @@ static void help()
     printf("Usage:\n\t./phaseTranslationAlign img1 img2....\n");
 }
 void contImg(const Mat &img, const Mat &reference, const Point2d shift, const char* outname1, const char* outname2);
+void calcMove(const vector<Point2d> &Shifts, vector<Point2d> &out);
+void contImgList(const vector<Mat> Imgs, const vector<Point2d> Shifts, const char* outImgName);
 int main(int argc, char *argv[])
 {
     if(argc < 3)
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
     // create hann
     createHanningWindow(hann, img.size(), CV_64F);
     createHanningWindow(lhann, img(lhalf).size(), CV_64F);
-    createHanningWindow(rhann, img(rhalf).size(), CV_64F);
+    //createHanningWindow(rhann, img(rhalf).size(), CV_64F);
     createHanningWindow(thann, img(thalf).size(), CV_64F);
     createHanningWindow(bhann, img(bhalf).size(), CV_64F);
 
@@ -115,13 +117,117 @@ int main(int argc, char *argv[])
             }
         }
         //vlog("%s ---> %s: x = %lf, y = %lf\n", argv[i], argv[i + 1], shift.x, shift.y);
-        vlog("%lf %lf\n", shift.x, shift.y);
+        //vlog("%lf %lf\n", shift.x, shift.y);
         Shifts.push_back( shift );
     }
+    vector<Point2d> out;
+    calcMove(Shifts, out);
+    for(size_t i = 0; i < out.size(); ++i) printf("%lf %lf\n", out[i].x, out[i].y);
+    contImgList(inputs, Shifts, "result.jpg");
     return 0;
 
 }
 
+void calcMove(const vector<Point2d> &Shifts, vector<Point2d> &out)
+{
+    out = vector<Point2d>(Shifts.size() + 1);
+    Point2d shift = Point2d(0, 0);
+    out[0] = shift;
+    for(size_t i = 0; i < Shifts.size(); ++i)
+        out[i + 1] = -Shifts[i];
+    for(size_t i = 1; i < out.size(); ++i)
+    {
+        out[i].x += out[i - 1].x;
+        out[i].y += out[i - 1].y;
+    }
+    return;
+}
+void contImgList(const vector<Mat> Imgs, const vector<Point2d> Shifts, const char* outImgName)
+{
+    int numItems = static_cast<int> (Imgs.size());
+    if( numItems < 2 )
+    {
+        vlog("Not enough images for vconcat !\n");
+        return;
+    }
+    if( numItems != static_cast<int>(Shifts.size()) + 1) 
+    {
+        vlog("assert Imgs.size() == Shifts.size() + 1  error !\n");
+        return;
+    }
+    int height = Imgs[0].rows;
+    int width = Imgs[0].cols;
+
+    // Check img size and Shifts
+    for(int i = 1; i < numItems; ++i)
+    {
+        if(Imgs[i].rows != height || Imgs[i].cols != width)
+        {
+            vlog("Image size should same.\n");
+            return;
+        }
+        if(Shifts[i - 1].x < 0)
+        {
+            vlog("Shifts[%d].x cannot < 0.\n", i - 1);
+        }
+    }
+    vector<Point2i> intShifts(Imgs.size());
+    vector<Point2i> intSumShifts(Imgs.size());
+    vector<Rect> rects(Imgs.size());
+    
+    // img0 as reference
+    intShifts[0] = Point2i(0, 0);
+    intSumShifts[0] = Point2i(0, 0);
+
+    // convet to coor(0, 0) at left-top, double2int
+    vlog("intShifts:\n0 0\n");
+    for(size_t i = 0; i < Shifts.size(); ++i)
+    {
+        intShifts[i + 1].x = Shifts[i].x > 0 ? (int)( Shifts[i].x + 0.5 ) : -(int)(-Shifts[i].x + 0.5);
+        intShifts[i + 1].y = Shifts[i].y > 0 ? (int)( Shifts[i].y + 0.5 ) : -(int)(-Shifts[i].y + 0.5);
+        intShifts[i + 1] = -intShifts[i + 1];
+        vlog("%d %d\n", intShifts[i+1].x, intShifts[i+1].y);
+        intSumShifts[i + 1] = intShifts[i + 1];
+    }
+    
+    // Find max x,y move, maxposy for max step moving down, minnegy for max step moving up.
+    int maxposy = 0, minnegy = 0;
+    vlog("intSumShifts:\n0 0\n");
+    for(size_t i = 1; i < intSumShifts.size(); ++i)
+    {
+        intSumShifts[i] += intSumShifts[i - 1];
+        vlog("%d %d\n", intSumShifts[i].x, intSumShifts[i].y);
+        if( intSumShifts[i].y > 0 && intSumShifts[i].y > maxposy ) maxposy = intSumShifts[i].y;
+        if( intSumShifts[i].y < 0 && intSumShifts[i].y < minnegy ) minnegy = intSumShifts[i].y;
+    }
+    vlog("\nmaxposy = %d; minnegy = %d\n", maxposy, minnegy);
+
+    int dsth = height - maxposy + minnegy;
+    //Mat dst = Mat::zeros(dsth, width + intSumShifts[ intSumShifts.size() - 1 ].x, CV_8UC3);
+    Mat dst = Mat::zeros(dsth, width + intSumShifts[ numItems - 1 ].x, CV_8UC3);
+    //cout<<dst.size()<<endl;
+    //|---->+
+    //|
+    //+
+    for(size_t i = 0; i < intSumShifts.size() - 1; ++i)
+    {
+        rects[i] = Rect( 0, maxposy - intSumShifts[i].y, intShifts[i + 1].x, dsth);
+    }
+    //rects[ intSumShifts.size() - 1 ] = Rect(0, maxposy - intSumShifts[ intSumShifts.size() - 1 ].y, 1280, dsth);
+    rects[ numItems - 1 ] = Rect(0, maxposy - intSumShifts[ numItems - 1 ].y, 1280, dsth);
+    for(size_t i = 0; i < rects.size() - 1; ++i)
+    {
+        Rect dstrect = Rect(intSumShifts[i].x, 0, intShifts[i + 1].x, dsth);
+        //cout<<i<<"-->"<<rects[i]<<"---"<<dstrect<<endl;
+        Imgs[i](rects[i]).copyTo(dst( dstrect ));
+    }
+    //Rect dstrect = Rect(intSumShifts[ intSumShifts.size() - 1 ].x, 0, 1280, dsth);
+    //Imgs[ intSumShifts.size() - 1 ](rects[ intSumShifts.size() - 1 ]).copyTo( dst(dstrect) );
+    Rect dstrect = Rect(intSumShifts[ numItems - 1 ].x, 0, 1280, dsth);
+    Imgs[ numItems - 1 ](rects[ numItems - 1 ]).copyTo( dst(dstrect) );
+    imwrite(outImgName, dst);
+    return;
+}
 void contImg(const Mat &img1, const Mat &img2, const Point2d shift, const char* outname1, const char* outname2)
 {
     Mat img, reference;
