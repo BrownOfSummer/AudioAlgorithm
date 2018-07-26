@@ -258,7 +258,7 @@ Mat colorThreshSegment(Mat original, const vector<int> colorThresh, const string
  * Paras:
  *      src,    Input, 3 channel BGR color image.
  *      dst,    Output, same size with src, remove non-skin-tone pixels;
- *      method, Input, < 0 for hsv, others for YCrCb
+ *      method, Input,  <=0 for hsv, others for YCrCb
  * Return:
  *      mask, binary image with same size with src, skin-tone is marked as 255;
  * Reference: https://arxiv.org/pdf/1708.02694.pdf
