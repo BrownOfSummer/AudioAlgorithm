@@ -21,12 +21,19 @@ int main(int argc, char *argv[])
     }
     Mat img = imread(argv[1], 1);
     if(img.rows > 640 || img.cols > 1280) resize(img, img, img.size() / 2);
-    Mat gray, binary;
+    Mat gray, binary, skin, skin_mask, mask;
     cvtColor(img, gray, CV_BGR2GRAY);
+    skin_mask = detectSkinTone(img, skin, 1);
     roughThreshSegment(img, binary);
+    bitwise_or(skin_mask, binary, mask);
+    imshow("src", img);
     imshow("rough", binary);
-    binary = refineBinarySegments(binary);
-    imshow("refine", binary);
+    imshow("skin", skin);
+    imshow("skin_mask", skin_mask);
+    imshow("rough+skin", mask);
+    mask = refineBinarySegments(mask);
+    imshow("mask", mask);
+
     waitKey();
     return 0;
 }

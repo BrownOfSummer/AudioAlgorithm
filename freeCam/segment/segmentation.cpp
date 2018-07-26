@@ -1,5 +1,7 @@
 // Intend to segment image.
 #include<iostream>
+#include<cstdio>
+#include<cstdarg>
 #include<vector>
 #include<string>
 #include<opencv2/opencv.hpp>
@@ -181,6 +183,7 @@ Mat refineBinarySegments(Mat binary)
     //Mat new_mask = singleConnetedDomainContour(binary);
     Mat new_mask = singleConnetedDomain(binary);
     new_mask = fillHole( new_mask );
+    morphologyEx(new_mask, new_mask, MORPH_OPEN, Mat::ones(3,3,CV_8SC1), Point(1,1), 2 );
     //vector<vector<Point> >contours;
     //vector<Vec4i> hierarchy;
     //int maxAreaIdx = getAreaContours(new_mask, contours, hierarchy);

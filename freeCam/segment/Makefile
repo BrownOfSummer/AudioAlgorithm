@@ -6,7 +6,7 @@ OBJS=segmentation.o
 all:
 	make main
 main: main.o $(OBJS)
-	$(CXX) $(CFLAGS) -o main main.o $(OBJS) $(LIBS)
+	$(CXX) $(CFLAGS) -o seg main.o $(OBJS) $(LIBS)
 
 .cpp.o:
 	$(CXX) $(INCLUDE) -c $< -o $@
@@ -14,4 +14,4 @@ main: main.o $(OBJS)
 clean:
 	-rm *.o
 distclean:
-	-rm main
+	-rm seg
