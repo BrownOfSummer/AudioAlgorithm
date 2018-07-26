@@ -23,6 +23,8 @@ Mat drawPointPairs(const Mat &img1, const Mat&img2, const std::vector<Point2f> &
 void getMatchPoints(Mat img, Mat reference, std::vector<Point2f> &imgP, std::vector<Point2f> &referenceP);
 void getWarpMatrixORB(std::vector<Point2f> imgP, std::vector<Point2f> referenceP, Mat &warpMatrix, const int method);
 void warpImage(Mat img, Mat &imgWrap, Size outSize, Mat warpMatrix, const int method);
+Point2d phaseMove(const Mat &img, const Mat &reference);
+Mat localWarpEstimate(const std::vector<Point2f>& shape1, const std::vector<Point2f>& shape2, int type);
 #if CV_MAJOR_VERSION > 2
 // ECC based
 void getWarpMatrixECC(Mat img, Mat reference, Mat &warpMatrix, const int warp_mode);

@@ -7,6 +7,8 @@
  ************************************************************************/
 
 #include<iostream>
+#include <cstdio>
+#include <cstdarg>
 #include<opencv2/opencv.hpp>
 using namespace std;
 using namespace cv;
@@ -166,9 +168,10 @@ void contImgList(const vector<Mat> Imgs, const vector<Point2d> Shifts, const cha
             vlog("Image size should same.\n");
             return;
         }
-        if(Shifts[i - 1].x < 0)
+        if(Shifts[i - 1].x > 0)
         {
-            vlog("Shifts[%d].x cannot < 0.\n", i - 1);
+            vlog("Shifts[%d].x cannot > 0.\n", i - 1);
+            return;
         }
     }
     vector<Point2i> intShifts(Imgs.size());
