@@ -1,0 +1,7 @@
+A tool set to calibrate camera, and rectify video frames.
+Calibration process based on zhangzhengyou's algorithm and chessboard in ./checker-board
+(1) ./xmls the calibration in put and results.
+(2) ./loadAndUndistortion.cpp load calibration result and rectify a image, for testing.
+(3) ./rectifyToFrames.cpp rectify the video to frames and save to dir, with -ss and -t;
+(4) ./rectifyVideo.cpp rectify video and write the result to a new video.
+(5) ./selectChessBoardImgs.cpp a simple tool for selecting chessboard image for calibration.
