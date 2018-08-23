@@ -1,0 +1,22 @@
+Panorama frames lists.
+Algorithm modify from opencv stitcher class.
+
+We need find keypoint matches(use surf here) for the image list, then calc the homography matrix according the matches, 
+then warp the images according to homography to find the connected componet, then find the seam and blend the result.
+The matching and paras calculation is time consuming.
+(1) simpleStitchFrames.cpp calc paras everytimes, save result in ./tmp/ (mkdir tmp befroe).
+    ./simpleStitchFrames /path/to/dir0/ /path/to/dir1/ ....
+(2) main.cpp stitchPlane.cpp calc paras one time and reuse it.
+    ./stitchPlane /path/to/dir0/ /path/to/dir1/ ..../path/to/out/
+(3) simpleStitchImages calc paras and stitch images in Plane mode.
+    ./simpleStitchImages img1 img2 ...
+
+Tools:
+    (1) ./match_surf.cpp show the keypoints and matches between two images.
+        ./match_surf img1 img2 [match_conf]
+    (2) ./selectROI.cpp helps to select common area in images.
+        ./selectROI img1 img2 ...
+    (3) ./tool_crop crop the black boarder in stitching image.
+        ./tool_crop img
+
+Test on opencv 2.4.x
